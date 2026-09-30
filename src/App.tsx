@@ -16,8 +16,6 @@ import {
   getCategorias,
   getAcompanhamentos,
   getCoberturas,
-  getCachedProducts,
-  getCachedCategorias,
   getCachedAcompanhamentos,
   getCachedCoberturas,
   subscribeToDatabase,
@@ -27,20 +25,6 @@ import { AdminLogin } from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import { getCategoryFlags, getProductTypes, isComboCategory, sortProductsForMenu } from './utils/categoryRules';
 
-const COMBOS_SECTION_ID = '__combos__';
-
-const normalizeCategoryName = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-
-const categoryOrder = (category: Category) => {
-  const name = normalizeCategoryName(`${category.id} ${category.name}`);
-  if (name.includes('acai')) return 0;
-  if (name.includes('combo')) return 1;
-  if (name.includes('salgado') || name.includes('churro')) return 2;
-  if (name.includes('sorvete')) return 3;
-  if (name.includes('milkshake') || name.includes('milk shake')) return 4;
-  return 5 + (category.order ?? 0) / 1000;
-};
-
 function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<CategoryId | 'todos'>('todos');
@@ -48,25 +32,16 @@ function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
   const programmaticTarget = useRef<string | null>(null);
 
   // Database-backed dynamic state
-  const [products, setProducts] = useState<Product[]>(getCachedProducts);
-  const [categories, setCategories] = useState<Category[]>(getCachedCategorias);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [menuLoaded, setMenuLoaded] = useState(false);
   const [acompanhamentos, setAcompanhamentos] = useState<Complement[]>(getCachedAcompanhamentos);
   const [coberturas, setCoberturas] = useState<Cobertura[]>(getCachedCoberturas);
   const optionsLoaded = useRef(false);
   const menuRequest = useRef<Promise<void> | null>(null);
 
-  const orderedCategories = useMemo(() => {
-    const result = [...categories].sort((a, b) => categoryOrder(a) - categoryOrder(b));
-    if (!result.some((category) => isComboCategory(category.id, category.name))) {
-      const acaiIndex = result.findIndex((category) => categoryOrder(category) === 0);
-      result.splice(acaiIndex >= 0 ? acaiIndex + 1 : 0, 0, {
-        id: COMBOS_SECTION_ID,
-        name: 'Combos',
-        order: 1,
-      });
-    }
-    return result;
-  }, [categories]);
+  // A ordem recebida do Supabase é mantida na navegação e nas seções.
+  const orderedCategories = categories;
 
   const getMenuSection = (id: string) =>
     [...document.querySelectorAll<HTMLElement>('[data-category-section]')]
@@ -97,15 +72,16 @@ function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
     if (!menuRequest.current) {
       menuRequest.current = (async () => {
         try {
-          const [prods, cats] = await Promise.all([
+          const [productsResult, categoriesResult] = await Promise.allSettled([
             getProducts(),
             getCategorias(),
           ]);
-          setProducts(prods);
-          setCategories(cats);
+          setProducts(productsResult.status === 'fulfilled' ? productsResult.value : []);
+          setCategories(categoriesResult.status === 'fulfilled' ? categoriesResult.value : []);
         } catch {
           // ignore
         } finally {
+          setMenuLoaded(true);
           menuRequest.current = null;
         }
       })();
@@ -128,7 +104,6 @@ function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
   useEffect(() => {
     if (
       selectedCategory !== 'todos' &&
-      selectedCategory !== COMBOS_SECTION_ID &&
       categories.length > 0 &&
       !categories.some((cat) => cat.id === selectedCategory)
     ) {
@@ -166,7 +141,7 @@ function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
     product.isCombo === true || getCategoryFlags(product.categoryId, categories).isCombo;
 
   const categorySections = useMemo(() => orderedCategories.map((category) => {
-    const categoryIsCombo = category.id === COMBOS_SECTION_ID || isComboCategory(category.id, category.name);
+    const categoryIsCombo = isComboCategory(category.id, category.name);
     const sectionProducts = filteredProducts.filter((product) => categoryIsCombo
       ? isComboProduct(product)
       : product.categoryId === category.id && !isComboProduct(product));
@@ -302,7 +277,12 @@ function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
         <div className="mt-3 sm:mt-5 grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
           {/* Left Column: Product Catalog & Promo Banners (lg: 8.5 columns) */}
           <div className="lg:col-span-8 xl:col-span-9 space-y-4 sm:space-y-5">
-            {searchQuery.trim() ? (
+            {!menuLoaded ? (
+              <div className="rounded-3xl border border-purple-100 bg-white p-8 text-center shadow-xs">
+                <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-purple-100 border-t-purple-700" />
+                <p className="text-sm font-semibold text-slate-500">Carregando cardápio...</p>
+              </div>
+            ) : searchQuery.trim() ? (
               <section className="scroll-mt-32 lg:scroll-mt-24">
                 <div className="flex items-center gap-2 pb-1 px-1">
                   <Search className="w-5 h-5 text-purple-700" />

@@ -1,15 +1,16 @@
 import React from 'react';
-import { CATEGORIES } from '../data/menuConfig';
-import { CategoryId } from '../types/menu';
+import { Category, CategoryId } from '../types/menu';
 
 interface CategoryNavProps {
   selectedCategory: CategoryId | 'todos';
   onSelectCategory: (categoryId: CategoryId | 'todos') => void;
+  categories: Category[];
 }
 
 export const CategoryNav: React.FC<CategoryNavProps> = ({
   selectedCategory,
   onSelectCategory,
+  categories,
 }) => {
   const getCategoryIcon = (id: string) => {
     switch (id) {
@@ -51,7 +52,7 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({
   return (
     <div className="w-full my-3 sm:my-5">
       <div className="bg-white/80 backdrop-blur-md p-1.5 sm:p-2 rounded-2xl sm:rounded-full border border-purple-100 shadow-xs flex items-center gap-2 overflow-x-auto no-scrollbar">
-        {CATEGORIES.map((cat) => {
+        {categories.map((cat) => {
           // If 'todos' is selected, default highlight 'acai' like in image.png
           const isSelected = selectedCategory === cat.id || (selectedCategory === 'todos' && cat.id === 'acai');
 

@@ -54,8 +54,6 @@ import {
 
 
   uploadProductImage,
-  getCachedProducts,
-  getCachedCategorias,
   getCachedAcompanhamentos,
   getCachedCoberturas,
   restoreCachedProduct,
@@ -115,10 +113,10 @@ export default function AdminDashboard({
     useState<AdminTab>('produtos');
 
   const [products, setProducts] =
-    useState<Product[]>(getCachedProducts);
+    useState<Product[]>([]);
 
   const [categorias, setCategorias] =
-    useState<Category[]>(getCachedCategorias);
+    useState<Category[]>([]);
 
   const [
     acompanhamentos,
@@ -132,7 +130,7 @@ export default function AdminDashboard({
 
 
   const [loading, setLoading] =
-    useState(false);
+    useState(true);
   const [savingProduct, setSavingProduct] = useState(false);
   const savingProductRef = useRef(false);
 
@@ -188,24 +186,20 @@ export default function AdminDashboard({
   };
 
   const loadData = async () => {
-    // Cache is rendered immediately; refresh all four tables concurrently.
-    setProducts(getCachedProducts());
-    setCategorias(getCachedCategorias());
-    setAcompanhamentos(getCachedAcompanhamentos());
-    setCoberturas(getCachedCoberturas());
-    setLoading(false);
+    setLoading(true);
 
     const results = await Promise.allSettled([
       getProducts(), getCategorias(), getAcompanhamentos(), getCoberturas(),
     ]);
     const [productsResult, categoriesResult, complementsResult, toppingsResult] = results;
-    if (productsResult.status === 'fulfilled') setProducts(productsResult.value);
-    if (categoriesResult.status === 'fulfilled') setCategorias(categoriesResult.value);
+    setProducts(productsResult.status === 'fulfilled' ? productsResult.value : []);
+    setCategorias(categoriesResult.status === 'fulfilled' ? categoriesResult.value : []);
     if (complementsResult.status === 'fulfilled') setAcompanhamentos(complementsResult.value);
     if (toppingsResult.status === 'fulfilled') setCoberturas(toppingsResult.value);
     if (results.some((result) => result.status === 'rejected')) {
-      showFeedback('Alguns dados não puderam ser atualizados. Exibindo os dados salvos no dispositivo.');
+      showFeedback('Alguns dados não puderam ser carregados. Verifique a conexão e tente novamente.');
     }
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -268,9 +262,7 @@ export default function AdminDashboard({
 
   // Produtos agrupados por categoria (100% dinâmico: toda categoria
   // existente aparece, mesmo sem produtos)
-  const sortedCategorias = [...categorias].sort(
-    (a, b) => (a.order ?? 0) - (b.order ?? 0)
-  );
+  const sortedCategorias = categorias;
 
   const sortProducts = (list: Product[]) =>
     [...list].sort(

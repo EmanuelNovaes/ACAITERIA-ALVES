@@ -1,9 +1,7 @@
 import {
-  CategoryId,
   Complement,
   Cobertura,
   OpcaoAcai,
-  Product,
   StoreConfig,
 } from '../types/menu';
 
@@ -50,15 +48,6 @@ export const INITIAL_STORE_CONFIG: StoreConfig = {
   deliveryEstimateMinutes: '35 - 50 min',
   pickupEstimateMinutes: '15 - 25 min',
 };
-
-// Categories matching exact prompt specification
-export const CATEGORIES: { id: CategoryId; name: string; icon: string; description: string }[] = [
-  { id: 'acai', name: 'Açaí', icon: 'Bowl', description: 'Monte seu açaí no copo ou na marmita com os melhores acompanhamentos e coberturas!' },
-  { id: 'sorvetes', name: 'Sorvetes', icon: 'IceCream', description: 'Diversos sabores artesanais e cremosos para você se refrescar.' },
-  { id: 'salgados', name: 'Salgados & Churros', icon: 'Utensils', description: 'Crocantes, sequinhos e quentinhos, perfeitos para acompanhar!' },
-  { id: 'milkshakes', name: 'Milk Shakes', icon: 'CupSoda', description: 'Cremosos, geladinhos e com muito recheio, feitos na hora!' },
-  { id: 'bebidas', name: 'Bebidas', icon: 'GlassWater', description: 'Sucos naturais, refrigerantes e água para matar sua sede.' },
-];
 
 // Exact confirmed Acompanhamentos (19 items)
 export const INITIAL_ACOMPANHAMENTOS: Complement[] = [
@@ -125,100 +114,4 @@ export const SIZES_ACAI_MARMITA = [
   { id: '500ml', label: '500ml', volume: '500ml', price: 22.0, maxComplements: 8, active: true },
 ];
 
-// Initial Real Confirmed Products
-export const INITIAL_PRODUCTS: Product[] = [
-  // 1. Açaí no Copo (Principal)
-  {
-    id: 'acai-copo',
-    name: 'Açaí no Copo',
-    categoryId: 'acai',
-    description: 'Açaí batido na hora, super cremoso. Escolha o tamanho, sua base, acompanhamentos e cobertura favorita!',
-    image: acaiCopoCardImg,
-    basePrice: 16.0,
-    sizes: SIZES_ACAI_COPO,
-    maxFreeComplements: 3,
-    active: true,
-    order: 1,
-  },
-  // 2. Açaí na Marmita (Principal)
-  {
-    id: 'acai-marmita',
-    name: 'Açaí na Marmita',
-    categoryId: 'acai',
-    description: 'Marmita recheada com açaí bem geladinho e generosas camadas de acompanhamentos e cobertura!',
-    image: acaiTigelaCardImg,
-    basePrice: 17.0,
-    sizes: SIZES_ACAI_MARMITA,
-    maxFreeComplements: 4,
-    active: true,
-    order: 2,
-  },
-  // 3. Açaí + Leitinho
-  {
-    id: 'acai-leitinho',
-    name: 'Açaí + Leitinho',
-    categoryId: 'acai',
-    description: 'Açaí especial com toque cremoso de leitinho em pó. Escolha no copo ou na marmita!',
-    image: acaiCopoCardImg,
-    basePrice: 16.0,
-    sizes: SIZES_ACAI_COPO,
-    maxFreeComplements: 3,
-    active: true,
-    order: 3,
-  },
-  // 4. Açaí + Avelã
-  {
-    id: 'acai-avela',
-    name: 'Açaí + Avelã',
-    categoryId: 'acai',
-    description: 'A combinação irresistível de açaí cremoso com creme de avelã de alta qualidade.',
-    image: acaiCopoCardImg,
-    basePrice: 16.0,
-    sizes: SIZES_ACAI_COPO,
-    maxFreeComplements: 3,
-    active: true,
-    order: 4,
-  },
-  // 5. Açaí Zero
-  {
-    id: 'acai-zero',
-    name: 'Açaí Zero',
-    categoryId: 'acai',
-    description: 'Todo o sabor do açaí puro, sem adição de açúcares ou xaropes.',
-    image: acaiZeroCardImg,
-    basePrice: 16.0,
-    sizes: SIZES_ACAI_COPO,
-    maxFreeComplements: 3,
-    active: true,
-    order: 5,
-  },
-  // 6. Açaí + Banana
-  {
-    id: 'acai-banana',
-    name: 'Açaí + Banana',
-    categoryId: 'acai',
-    description: 'Batido tradicional com banana fresca selecionada, energia pura!',
-    image: acaiNatCardImg,
-    basePrice: 16.0,
-    sizes: SIZES_ACAI_COPO,
-    maxFreeComplements: 3,
-    active: true,
-    order: 6,
-  },
-  // 7. Açaí Natural
-  {
-    id: 'acai-natural',
-    name: 'Açaí Natural',
-    categoryId: 'acai',
-    description: 'Açaí puro e autêntico, perfeito para quem ama o sabor original.',
-    image: acaiNatCardImg,
-    basePrice: 16.0,
-    sizes: SIZES_ACAI_COPO,
-    maxFreeComplements: 3,
-    active: true,
-    order: 7,
-  },
-];
-
-export const PRODUCTS = INITIAL_PRODUCTS;
 export const STANDARD_COMPLEMENTS = INITIAL_ACOMPANHAMENTOS;
