@@ -9,16 +9,25 @@
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 
-  h1, h2, h3, .font-display {
+  h1,
+  h2,
+  h3,
+  .font-display {
     font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
   }
 }
 
-/* Custom animations */
+/* =========================================
+   CUSTOM ANIMATIONS
+   ========================================= */
+
 @keyframes floatAnimation {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0px) rotate(0deg);
   }
+
   50% {
     transform: translateY(-8px) rotate(1deg);
   }
@@ -32,9 +41,11 @@
   0% {
     transform: scale(0.8);
   }
+
   50% {
     transform: scale(1.2);
   }
+
   100% {
     transform: scale(1);
   }
@@ -44,7 +55,10 @@
   animation: scaleCheck 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-/* Hide scrollbar for clean category tabs */
+/* =========================================
+   HIDE SCROLLBAR
+   ========================================= */
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -53,6 +67,60 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* =========================================
+   DESKTOP
+   Centralização real das categorias
+   ========================================= */
+
+@media (min-width: 1024px) {
+
+  /*
+   * A linha principal do header vira referência
+   * para o posicionamento absoluto da navegação.
+   */
+  .mobile-menu-header__row {
+    position: relative;
+  }
+
+  /*
+   * Centraliza as categorias em relação ao header
+   * inteiro, e não apenas ao espaço restante
+   * entre a logo e a área de busca.
+   */
+  .desktop-category-nav {
+    position: absolute;
+
+    left: 42%;
+    transform: translateX(-50%);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: max-content;
+
+    /*
+     * Reserva espaço para a logo à esquerda
+     * e busca/ADM à direita.
+     */
+    max-width: calc(100% - 430px);
+
+    min-width: 0;
+
+    overflow-x: auto;
+    overflow-y: hidden;
+
+    white-space: nowrap;
+
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+
+/* =========================================
+   MOBILE
+   ========================================= */
 
 @media (max-width: 767px) {
   .mobile-menu-header {
