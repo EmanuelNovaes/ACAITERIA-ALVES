@@ -26,8 +26,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateToAdmin }) => {
 
             <BrandLogo size="lg" variant="white" className="order-1 justify-center md:justify-start" />
 
-            <p className="order-2 text-purple-200/70 max-w-sm text-xs leading-relaxed text-center md:text-left">
-              {storeConfig.tagline} Preparado com ingredientes selecionados,
+            <p className="order-2 text-purple-200/70 max-w-sm text-xs leading-relaxed text-center mx-auto md:mx-0 md:text-left">              {storeConfig.tagline} Preparado com ingredientes selecionados,
               frutas frescas e todo carinho para você e sua família.
             </p>
 
