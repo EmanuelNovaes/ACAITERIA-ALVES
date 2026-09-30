@@ -9,7 +9,6 @@ import {
 
 import {
   INITIAL_STORE_CONFIG,
-  INITIAL_SAMPLE_CART,
 } from '../data/menuConfig';
 
 import { getAcaiTypeMessageLabel } from '../utils/categoryRules';
@@ -90,17 +89,19 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       const saved = localStorage.getItem(CART_STORAGE_KEY);
 
-      if (!saved) return INITIAL_SAMPLE_CART;
+      if (!saved) return [];
 
       // Migra itens salvos pela versão anterior, que duplicava o tipo em
       // `acaiType`, para o campo `tipo` já usado pelo produto.
       const savedItems = JSON.parse(saved) as (CartItem & { acaiType?: string })[];
-      return savedItems.map(({ acaiType, ...item }) => ({
-        ...item,
-        tipo: acaiType || item.tipo,
-      }));
+      return savedItems
+        .filter((item) => item.id !== 'sample-acai-copo-500')
+        .map(({ acaiType, ...item }) => ({
+          ...item,
+          tipo: acaiType || item.tipo,
+        }));
     } catch {
-      return INITIAL_SAMPLE_CART;
+      return [];
     }
   });
 

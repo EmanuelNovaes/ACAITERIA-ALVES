@@ -5,7 +5,6 @@ import {
   OpcaoAcai,
   Product,
   StoreConfig,
-  CartItem,
 } from '../types/menu';
 
 import heroBannerImg from '../assets/images/hero_banner_alves_1790429863758.jpg';
@@ -218,31 +217,6 @@ export const INITIAL_PRODUCTS: Product[] = [
     maxFreeComplements: 3,
     active: true,
     order: 7,
-  },
-];
-
-// Initial sample cart for immediate demonstration
-export const INITIAL_SAMPLE_CART: CartItem[] = [
-  {
-    id: 'sample-acai-copo-500',
-    productId: 'acai-copo',
-    productName: 'Açaí no Copo',
-    categoryName: 'acai',
-    image: acaiCopoCardImg,
-    tipo: 'Açaí Natural',
-    selectedSize: { id: '500ml', label: '500ml', price: 22.0, maxComplements: 6 },
-    selectedComplements: [
-      { id: 'banana', name: 'Banana' },
-      { id: 'morango', name: 'Morango' },
-      { id: 'granola', name: 'Granola' },
-      { id: 'pacoca', name: 'Paçoca' },
-      { id: 'leite_po', name: 'Leite em Pó' },
-      { id: 'kiwi', name: 'Kiwi' },
-    ],
-    cobertura: 'Chocolate',
-    unitPrice: 22.0,
-    quantity: 1,
-    totalPrice: 22.0,
   },
 ];
 
