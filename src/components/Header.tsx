@@ -56,16 +56,16 @@ export const Header: React.FC<HeaderProps> = ({
   }, [selectedCategory]);
 
   return (
-    <header className="sticky top-0 z-40 bg-[#35074a] text-white shadow-md border-b border-[#490c64]">
+    <header className="mobile-menu-header sticky top-0 z-40 bg-[#35074a] text-white shadow-md border-b border-[#490c64]">
       {/* Top Main Bar */}
-      <div className="max-w-[1360px] mx-auto px-0 sm:px-2">
-        <div className="flex items-center justify-between h-16 sm:h-[72px] gap-2 md:gap-4">
+      <div className="mobile-menu-header__container max-w-[1360px] mx-auto px-0 sm:px-2">
+        <div className="mobile-menu-header__row flex items-center justify-between h-16 sm:h-[72px] gap-2 md:gap-4">
           {/* Brand Logo - 3 risks removed, logo preserved */}
 
-          <div className="flex items-center shrink-0 -translate-x-12">
+          <div className="mobile-menu-header__brand flex items-center shrink-0 -translate-x-12">
             <button
               onClick={() => onSelectCategory('todos')}
-              className="flex items-center text-left cursor-pointer active:scale-98 transition-transform"
+              className="mobile-menu-header__brand-button flex items-center text-left cursor-pointer active:scale-98 transition-transform"
             >
               <BrandLogo size="md" variant="white" />
             </button>
@@ -102,9 +102,9 @@ export const Header: React.FC<HeaderProps> = ({
           </nav>
 
           {/* Right Section: Search & Cart Icon (Lock icon removed as requested) */}
-          <div className="flex items-center gap-2.5 sm:gap-3 flex-1 md:flex-initial justify-end">
+          <div className="mobile-menu-header__right flex items-center gap-2.5 sm:gap-3 flex-1 md:flex-initial justify-end">
             {/* Search Pill Input */}
-            <div className="relative w-full max-w-[180px] sm:max-w-[220px] md:max-w-[260px] lg:max-w-[190px] xl:max-w-[240px]">
+            <div className="mobile-menu-header__search relative w-full max-w-[180px] sm:max-w-[220px] md:max-w-[260px] lg:max-w-[190px] xl:max-w-[240px]">
               <input
                 type="text"
                 value={searchQuery}
@@ -137,7 +137,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Cart Icon Button on mobile and tablet */}
             <button
               onClick={openCart}
-              className="lg:hidden relative p-2 text-white hover:text-[#8ac627] transition-transform active:scale-95 cursor-pointer flex items-center justify-center shrink-0 bg-white/10 rounded-full"
+              className="mobile-menu-header__cart lg:hidden relative p-2 text-white hover:text-[#8ac627] transition-transform active:scale-95 cursor-pointer flex items-center justify-center shrink-0 bg-white/10 rounded-full"
               aria-label={`Ver pedido com ${itemCount} itens`}
             >
               <ShoppingCart className="w-5 h-5 stroke-[2.2]" />
@@ -151,7 +151,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Mobile Horizontal Scrolling Categories (No second bar below banner, clean mobile category navigation) */}
-        <div ref={mobileCategoryNav} className="lg:hidden py-2 border-t border-purple-800/40 flex items-center gap-1.5 overflow-x-auto overscroll-x-contain no-scrollbar pb-2.5">
+        <div ref={mobileCategoryNav} className="mobile-menu-header__categories lg:hidden py-2 border-t border-purple-800/40 flex items-center gap-1.5 overflow-x-auto overscroll-x-contain no-scrollbar pb-2.5">
           {categoriesList.map((cat) => {
             const isSelected = selectedCategory === cat.id;
             return (
