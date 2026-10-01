@@ -30,11 +30,12 @@ export const ProductOptionsModal: React.FC<ProductOptionsModalProps> = ({
   const { addItem } = useCart();
 
   const { isAcai, isFixedPrice, isCombo, categoryName } = getCategoryFlags(product?.categoryId, categories);
-  const normalizedCategoryName = `${product?.categoryId || ''} ${categoryName || ''}`
+  const normalizedCategoryName = `${product?.categoryId || ''} ${categoryName || ''} ${product?.name || ''}`
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase();
-  const isMilkShake = normalizedCategoryName.includes('milkshake') || normalizedCategoryName.includes('milk shake');
+    .toLowerCase()
+    .replace(/[^a-z]/g, '');
+  const isMilkShake = normalizedCategoryName.includes('milkshake');
   const supportsCobertura = isAcai || isMilkShake;
   const productSizes = isFixedPrice ? [] : product?.sizes || [];
 
@@ -250,7 +251,7 @@ export const ProductOptionsModal: React.FC<ProductOptionsModalProps> = ({
                       <span className="text-xs font-black text-[#35074a]">
                         {formatCurrency(size.price)}
                       </span>
-                      {size.maxComplements && (
+                      {!isMilkShake && size.maxComplements && (
                         <span className="text-[10px] font-semibold text-emerald-700 mt-1">
                           Até {size.maxComplements} acomp.
                         </span>
@@ -331,13 +332,13 @@ export const ProductOptionsModal: React.FC<ProductOptionsModalProps> = ({
             </p>
           )}
 
-          {/* 3. Cobertura */}
+          {/* Cobertura */}
           {supportsCobertura && activeCoberturas.length > 0 && (
             <div className="space-y-2.5 pt-2 border-t border-slate-100">
               <div className="flex items-center justify-between">
                 <label className="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1.5">
                   <span className="w-5 h-5 rounded-full bg-[#35074a] text-white flex items-center justify-center text-[10px] font-black">
-                    3
+                    {isMilkShake ? '2' : '3'}
                   </span>
                   <span>Cobertura</span>
                   <span className="text-red-500">*</span>
