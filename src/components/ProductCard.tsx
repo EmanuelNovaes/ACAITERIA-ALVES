@@ -24,11 +24,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const sizes = isFixedPrice ? [] : product.sizes || [];
   const badgeLabel =
     categoryName || product.badge || (isAcai ? 'Açaí' : undefined);
-  const normalizedCategoryName = `${product.categoryId} ${categoryName || ''}`
+  const normalizedCategoryName = `${product.categoryId} ${categoryName || ''} ${selectedCategory || ''} ${product.name}`
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase();
-  const isMilkShake = normalizedCategoryName.includes('milkshake') || normalizedCategoryName.includes('milk shake');
+    .toLowerCase()
+    .replace(/[^a-z]/g, '');
+  const isMilkShake = normalizedCategoryName.includes('milkshake');
 
   const defaultSize = sizes.find((s) => s.isDefault) || sizes[0];
   const [selectedSize, setSelectedSize] = useState<ProductSize | undefined>(defaultSize);
