@@ -30,6 +30,12 @@ export const ProductOptionsModal: React.FC<ProductOptionsModalProps> = ({
   const { addItem } = useCart();
 
   const { isAcai, isFixedPrice, isCombo, categoryName } = getCategoryFlags(product?.categoryId, categories);
+  const normalizedCategoryName = `${product?.categoryId || ''} ${categoryName || ''}`
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+  const isMilkShake = normalizedCategoryName.includes('milkshake') || normalizedCategoryName.includes('milk shake');
+  const supportsCobertura = isAcai || isMilkShake;
   const productSizes = isFixedPrice ? [] : product?.sizes || [];
 
   // Size state
@@ -63,7 +69,7 @@ export const ProductOptionsModal: React.FC<ProductOptionsModalProps> = ({
       setValidationError('');
 
       // Default first cobertura or empty
-      if (isAcai && availableCoberturas.length > 0) {
+      if (supportsCobertura && availableCoberturas.length > 0) {
         setSelectedCobertura(availableCoberturas[0].name);
       } else {
         setSelectedCobertura('');
@@ -117,7 +123,7 @@ export const ProductOptionsModal: React.FC<ProductOptionsModalProps> = ({
 
   const handleConfirmAdd = () => {
     // Validation: 1 Cobertura is required for Açaí (Section 9)
-    if (isAcai && !selectedCobertura) {
+    if (supportsCobertura && !selectedCobertura) {
       setValidationError('Por favor, escolha 1 cobertura para continuar.');
       return;
     }
@@ -133,7 +139,7 @@ export const ProductOptionsModal: React.FC<ProductOptionsModalProps> = ({
       selectedSize: isFixedPrice ? undefined : selectedSize,
       tipo: product.tipo || undefined,
       selectedComplements,
-      cobertura: isAcai ? selectedCobertura : undefined,
+      cobertura: supportsCobertura ? selectedCobertura : undefined,
       unitPrice,
       quantity,
       notes: isAcai ? notes.trim() : '',
@@ -326,7 +332,7 @@ export const ProductOptionsModal: React.FC<ProductOptionsModalProps> = ({
           )}
 
           {/* 3. Cobertura */}
-          {isAcai && activeCoberturas.length > 0 && (
+          {supportsCobertura && activeCoberturas.length > 0 && (
             <div className="space-y-2.5 pt-2 border-t border-slate-100">
               <div className="flex items-center justify-between">
                 <label className="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1.5">
