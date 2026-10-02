@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useLayoutEffect, useState } from 'react';
 import { X, Truck, Store, AlertCircle, ArrowRight } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { DeliveryType } from '../types/menu';
@@ -23,6 +23,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
   const [paymentMethod, setPaymentMethod] = useState(customerInfo.paymentMethod || 'Pix');
   const [notes, setNotes] = useState(customerInfo.notes);
   const [error, setError] = useState('');
+
+  useLayoutEffect(() => {
+    if (isOpen) setNotes('');
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -129,9 +133,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
               >
                 <Store className="w-5 h-5" />
                 <span>Retirar no local</span>
-                {storeConfig.pickupEstimateMinutes && (
-                  <span className="text-[10px] font-medium text-slate-400">{storeConfig.pickupEstimateMinutes}</span>
-                )}
               </button>
             )}
             {allowDelivery && (
@@ -147,7 +148,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
                 <Truck className="w-5 h-5" />
                 <span>Entrega</span>
                 <span className="text-[10px] font-medium text-slate-400">
-                  {formatCurrency(storeConfig.deliveryFee || 0)} · {storeConfig.deliveryEstimateMinutes}
+                  {formatCurrency(storeConfig.deliveryFee || 0)}
                 </span>
               </button>
             )}
@@ -212,7 +213,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Ex: sem casca de fruta, entregar na portaria..."
             rows={2}
             className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none"
           />

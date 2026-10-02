@@ -298,7 +298,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
         .join('-');
 
     const notesPart =
-      (item.notes || '').trim().toLowerCase();
+      (item.notes || '').trim();
 
     return `${item.productId}__${sizePart}__${tipoPart}__${coberturaPart}__${complementsPart}__${notesPart}`;
   };
@@ -521,7 +521,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 
       if (item.notes && item.notes.trim()) {
         lines.push(
-          `Obs: ${item.notes.trim()}`
+          `Observação: ${item.notes.trim()}`
         );
       }
 
