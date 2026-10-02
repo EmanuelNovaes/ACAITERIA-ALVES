@@ -14,13 +14,14 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   onSelectCategory,
   onNavigateToAdmin,
 }) => {
-  const { openCart, itemCount } = useCart();
+  const { openCart, closeCart, itemCount } = useCart();
 
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#340748] border-t border-purple-900/40 text-white px-6 py-2 shadow-2xl flex items-center justify-around">
       {/* Início */}
       <button
         onClick={() => {
+          closeCart();
           onSelectCategory('todos');
         }}
         className={`flex flex-col items-center gap-1 text-[11px] font-bold transition-colors cursor-pointer ${
