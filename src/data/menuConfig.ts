@@ -38,7 +38,7 @@ export const INITIAL_STORE_CONFIG: StoreConfig = {
   whatsappNumber: '5587981491472',
   phoneFormatted: '(87) 98149-1472',
   instagram: '@acaiteriaalves.s',
-  address: 'Itacuruba',
+  address: 'R. Rozendo Alves Teixeira, Itacuruba - PE',
   openingHours: '15:00 às 22:00',
   isOpen: true,
   currencySymbol: 'R$',

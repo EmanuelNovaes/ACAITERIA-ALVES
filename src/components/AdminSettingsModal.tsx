@@ -111,7 +111,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({ isOpen, 
               type="text"
               value={openingHours}
               onChange={(e) => setOpeningHours(e.target.value)}
-              placeholder="Ex: Terça a Domingo das 13:00 às 22:30"
+              placeholder="Ex: 15:00 às 22:00"
               className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-[#8ac627] focus:bg-white text-xs"
             />
           </div>

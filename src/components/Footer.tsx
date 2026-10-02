@@ -84,9 +84,14 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateToAdmin }) => {
               <div className="flex items-start justify-center md:justify-start gap-2">
                 <MapPin className="w-4 h-4 text-[#8ac627] shrink-0 mt-0.5" />
 
-                <span>
+                <a
+                  href="https://www.google.com/maps/place/A%C3%A7a%C3%ADteria+Alves/@-8.7268681,-38.6873764,17z/data=!4m14!1m7!3m6!1s0x70a27001cc7b89b:0xa0f4b6ca45cf48e7!2zQcOnYcOtdGVyaWEgQWx2ZXM!8m2!3d-8.7268681!4d-38.6873764!16s%2Fg%2F11z6wrdmj6!3m5!1s0x70a27001cc7b89b:0xa0f4b6ca45cf48e7!8m2!3d-8.7268681!4d-38.6873764!16s%2Fg%2F11z6wrdmj6?hl=pt-us&entry=ttu&g_ep=EgoyMDI2MDkyOS4wIKXMDSoASAFQAw%3D%3D"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-inherit no-underline"
+                >
                   {storeConfig.address}
-                </span>
+                </a>
               </div>
 
             </div>
