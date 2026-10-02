@@ -378,7 +378,6 @@ function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
         selectedCategory={selectedCategory}
         onReturnHome={() => {
           setSearchQuery('');
-          setSelectedCategory('todos');
         }}
         onNavigateToAdmin={onNavigateToAdmin}
       />
