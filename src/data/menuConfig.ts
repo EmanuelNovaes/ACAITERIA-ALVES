@@ -31,12 +31,12 @@ export const ASSETS = {
   combo: comboImg,
 };
 
-// Official Store Configuration with requested WhatsApp (87) 98149-1472
+// Official Store Configuration with requested WhatsApp +55 87 9665-2148
 export const INITIAL_STORE_CONFIG: StoreConfig = {
   storeName: 'Açaiteria Alves',
   tagline: 'Sabor, qualidade e muito mais energia para o seu dia!',
-  whatsappNumber: '5587981491472',
-  phoneFormatted: '(87) 98149-1472',
+  whatsappNumber: '558796652148',
+  phoneFormatted: '+55 87 9665-2148',
   instagram: '@acaiteriaalves.s',
   address: 'R. Rozendo Alves Teixeira, Itacuruba - PE',
   openingHours: '15:00 às 22:00',

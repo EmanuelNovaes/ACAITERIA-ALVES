@@ -115,13 +115,41 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 
       // A taxa de entrega é sempre a oficial (R$ 2,00): ignora valor antigo
       // que possa estar salvo no navegador de quem já visitou o cardápio.
-      return saved
-        ? {
-          ...INITIAL_STORE_CONFIG,
-          ...JSON.parse(saved),
-          deliveryFee: INITIAL_STORE_CONFIG.deliveryFee,
+      if (!saved) return INITIAL_STORE_CONFIG;
+
+      const savedConfig = JSON.parse(saved) as Partial<StoreConfig>;
+      let didMigrate = false;
+
+      if (savedConfig.openingHours === 'Terça a Domingo das 13:00 às 22:30') {
+        savedConfig.openingHours = '15:00 às 22:00';
+        didMigrate = true;
+      }
+      if (savedConfig.address === 'Av. Principal dos Sabores, 1200 - Centro') {
+        savedConfig.address = 'R. Rozendo Alves Teixeira, Itacuruba - PE';
+        didMigrate = true;
+      }
+      if (savedConfig.whatsappNumber === '5587981491472') {
+        savedConfig.whatsappNumber = INITIAL_STORE_CONFIG.whatsappNumber;
+        didMigrate = true;
+      }
+      if (savedConfig.phoneFormatted === '(87) 98149-1472') {
+        savedConfig.phoneFormatted = INITIAL_STORE_CONFIG.phoneFormatted;
+        didMigrate = true;
+      }
+
+      if (didMigrate) {
+        try {
+          localStorage.setItem(STORE_CONFIG_KEY, JSON.stringify(savedConfig));
+        } catch {
+          // Keep the corrected in-memory settings if storage is unavailable.
         }
-        : INITIAL_STORE_CONFIG;
+      }
+
+      return {
+        ...INITIAL_STORE_CONFIG,
+        ...savedConfig,
+        deliveryFee: INITIAL_STORE_CONFIG.deliveryFee,
+      };
     } catch {
       return INITIAL_STORE_CONFIG;
     }
