@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   X,
+  Trash2,
   Plus,
   Minus,
   ArrowRight,
   ChevronDown,
-  Truck,
   ChevronRight,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -31,6 +31,34 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isEmbeddedDesktop = fals
 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const hasCartHistoryEntry = useRef(false);
+  const closeCartRef = useRef(closeCart);
+  closeCartRef.current = closeCart;
+
+  useEffect(() => {
+    if (!isCartOpen || isEmbeddedDesktop) return;
+
+    window.history.pushState(
+      { ...(window.history.state ?? {}), cartDrawerOpen: true },
+      '',
+      window.location.href,
+    );
+    hasCartHistoryEntry.current = true;
+
+    const handleBack = () => {
+      hasCartHistoryEntry.current = false;
+      closeCartRef.current();
+    };
+
+    window.addEventListener('popstate', handleBack);
+    return () => {
+      window.removeEventListener('popstate', handleBack);
+      if (hasCartHistoryEntry.current) {
+        hasCartHistoryEntry.current = false;
+        window.history.back();
+      }
+    };
+  }, [isCartOpen, isEmbeddedDesktop]);
 
   const formatCurrency = (val: number) => `R$ ${val.toFixed(2).replace('.', ',')}`;
 
@@ -184,10 +212,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isEmbeddedDesktop = fals
                     <div className="flex flex-col items-end justify-between self-stretch shrink-0">
                       <button
                         onClick={() => removeItem(item.id)}
-                        className="text-slate-300 hover:text-rose-500 transition-colors p-0.5"
+                        className="text-rose-500 hover:text-rose-600 transition-colors p-0.5"
                         aria-label="Remover item"
                       >
-                        <X className="w-3.5 h-3.5" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                       <span className="font-extrabold text-xs text-slate-900">
                         {formatCurrency(item.totalPrice)}
@@ -229,15 +257,16 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isEmbeddedDesktop = fals
           <div className="bg-[#f8f9fa] rounded-2xl p-3 border border-slate-100 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-full bg-purple-100 text-[#35074a] flex items-center justify-center shrink-0">
-                <Truck className="w-4 h-4" />
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="6" cy="17" r="3" />
+                  <circle cx="18" cy="17" r="3" />
+                  <path d="m9 17 3-6h4l2 6M12 11l-2-3H7m5 3 3 3h3m-2-6h2l2 3" />
+                </svg>
               </div>
               <div className="text-left">
                 <h5 className="font-bold text-xs text-slate-900 leading-none">
-                  Entrega rápida
+                  Entrega Rápida
                 </h5>
-                <p className="text-[10px] text-slate-500 mt-1 leading-none">
-                  Seu pedido chega quentinho e no prazo!
-                </p>
               </div>
             </div>
             <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
@@ -263,7 +292,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isEmbeddedDesktop = fals
   // Mobile Slide-over Drawer
   return (
     <>
-      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex justify-end animate-in fade-in duration-200">
+      <div className="fixed inset-x-0 top-0 bottom-[54px] z-50 bg-black/60 backdrop-blur-xs flex justify-end animate-in fade-in duration-200">
         <div className="w-full sm:max-w-md h-full bg-white shadow-2xl flex flex-col p-4 overflow-y-auto">
           {content}
         </div>
