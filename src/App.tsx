@@ -376,7 +376,10 @@ function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
       {/* Mobile Bottom Navigation Bar */}
       <MobileBottomNav
         selectedCategory={selectedCategory}
-        onSelectCategory={scrollToCategory}
+        onReturnHome={() => {
+          setSearchQuery('');
+          setSelectedCategory('todos');
+        }}
         onNavigateToAdmin={onNavigateToAdmin}
       />
 
