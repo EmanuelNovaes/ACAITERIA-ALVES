@@ -5,6 +5,7 @@ import {
   Complement,
   Cobertura,
   Category,
+  ProductSize,
 } from '../types/menu';
 
 type Listener = () => void;
@@ -236,10 +237,7 @@ export const getProducts = async (): Promise<Product[]> => {
   }
 
   try {
-    // Produtos e tamanhos são leituras independentes: sobrepõe a latência
-    // de rede e agrupa tamanhos uma única vez antes de montar os produtos.
-    const [productQuery, sizesQuery] = await Promise.allSettled([
-      supabase.from('produtos').select(`
+    const { data, error } = await supabase.from('produtos').select(`
         id,
         nome,
         categoria,
@@ -250,78 +248,23 @@ export const getProducts = async (): Promise<Product[]> => {
         tipo,
         ativo,
         ordem
-      `).order('ordem', { ascending: true }),
-      supabase.from('produto_tamanhos').select(`
-          id,
-          produto_id,
-          nome,
-          volume,
-          preco,
-          limite_acompanhamentos,
-          ativo
-        `),
-    ]);
+      `).order('ordem', { ascending: true });
 
-    if (productQuery.status === 'rejected') throw productQuery.reason;
-    const productResult = productQuery.value;
-    const sizesResult = sizesQuery.status === 'fulfilled' ? sizesQuery.value : null;
-    if (sizesQuery.status === 'rejected' || sizesResult?.error) {
-      console.warn(
-        'Não foi possível carregar os tamanhos dos produtos:',
-        sizesQuery.status === 'rejected' ? sizesQuery.reason : sizesResult.error
-      );
-    }
-    const sizesByProduct = new Map<string, any[]>();
-    for (const size of sizesResult?.data || []) {
-      const productSizes = sizesByProduct.get(size.produto_id);
-      if (productSizes) productSizes.push(size);
-      else sizesByProduct.set(size.produto_id, [size]);
-    }
+    if (error) throw error;
 
-    return (productResult.data || []).map(
-      (item: any) => {
-        const productSizes = (sizesByProduct.get(item.id) || []).map(
-          (size: any) => ({
-            id: size.id,
-            label: size.nome,
-            volume:
-              size.volume ||
-              size.nome,
-            price: Number(size.preco),
-            maxComplements:
-              Number(
-                size.limite_acompanhamentos ?? 0
-              ),
-            active:
-              size.ativo !== false,
-          })
-        );
-
-        return {
-          id: item.id,
-          name: item.nome,
-          categoryId: item.categoria,
-          description: item.descricao,
-          image: item.imagem_url,
-          basePrice:
-            item.preco_base == null
-              ? 0
-              : Number(item.preco_base),
-          units:
-            item.unidades == null
-              ? undefined
-              : Number(item.unidades),
-          tipo:
-            item.tipo ||
-            undefined,
-          active:
-            item.ativo !== false,
-          order:
-            item.ordem ?? 0,
-          sizes: productSizes,
-        };
-      }
-    );
+    return (data || []).map((item: any) => ({
+      id: item.id,
+      name: item.nome,
+      categoryId: item.categoria,
+      description: item.descricao,
+      image: item.imagem_url,
+      basePrice: item.preco_base == null ? 0 : Number(item.preco_base),
+      units: item.unidades == null ? undefined : Number(item.unidades),
+      tipo: item.tipo || undefined,
+      active: item.ativo !== false,
+      order: item.ordem ?? 0,
+      sizes: [],
+    }));
   } catch (error) {
     console.error(
       'Erro ao carregar produtos do Supabase:',
@@ -330,6 +273,61 @@ export const getProducts = async (): Promise<Product[]> => {
 
     return [];
   }
+};
+
+export type LoadedProductSize = ProductSize & { productId: string };
+
+export const getProductSizes = async (productIds?: string[]): Promise<LoadedProductSize[]> => {
+  if (!isSupabaseConfigured() || productIds?.length === 0) return [];
+
+  try {
+    let query = supabase.from('produto_tamanhos').select(`
+      id,
+      produto_id,
+      nome,
+      volume,
+      preco,
+      limite_acompanhamentos,
+      ativo
+    `);
+    if (productIds) query = query.in('produto_id', productIds);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    return (data || []).map((size: any) => ({
+      id: size.id,
+      productId: size.produto_id,
+      label: size.nome,
+      volume: size.volume || size.nome,
+      price: Number(size.preco),
+      maxComplements: Number(size.limite_acompanhamentos ?? 0),
+      active: size.ativo !== false,
+    }));
+  } catch (error) {
+    console.error('Erro ao carregar tamanhos dos produtos:', error);
+    return [];
+  }
+};
+
+export const attachProductSizes = (
+  products: Product[],
+  sizes: LoadedProductSize[],
+  preserveExistingWhenMissing = false
+): Product[] => {
+  const sizesByProduct = new Map<string, ProductSize[]>();
+  for (const size of sizes) {
+    const productId = size.productId;
+    const productSizes = sizesByProduct.get(productId);
+    const { productId: _productId, ...productSize } = size;
+    if (productSizes) productSizes.push(productSize);
+    else sizesByProduct.set(productId, [productSize]);
+  }
+  return products.map((product) => {
+    const productSizes = sizesByProduct.get(product.id);
+    if (!productSizes && preserveExistingWhenMissing) return product;
+    return { ...product, sizes: productSizes || [] };
+  });
 };
 
 export const saveProduct = async (

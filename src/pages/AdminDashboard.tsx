@@ -33,6 +33,8 @@ import {
 
 import {
   getProducts,
+  getProductSizes,
+  attachProductSizes,
   saveProduct,
   deleteProduct,
   toggleProductActive,
@@ -189,10 +191,12 @@ export default function AdminDashboard({
     setLoading(true);
 
     const results = await Promise.allSettled([
-      getProducts(), getCategorias(), getAcompanhamentos(), getCoberturas(),
+      getProducts(), getProductSizes(), getCategorias(), getAcompanhamentos(), getCoberturas(),
     ]);
-    const [productsResult, categoriesResult, complementsResult, toppingsResult] = results;
-    setProducts(productsResult.status === 'fulfilled' ? productsResult.value : []);
+    const [productsResult, sizesResult, categoriesResult, complementsResult, toppingsResult] = results;
+    const currentProducts = productsResult.status === 'fulfilled' ? productsResult.value : [];
+    const currentSizes = sizesResult.status === 'fulfilled' ? sizesResult.value : [];
+    setProducts(attachProductSizes(currentProducts, currentSizes));
     setCategorias(categoriesResult.status === 'fulfilled' ? categoriesResult.value : []);
     if (complementsResult.status === 'fulfilled') setAcompanhamentos(complementsResult.value);
     if (toppingsResult.status === 'fulfilled') setCoberturas(toppingsResult.value);

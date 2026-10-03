@@ -13,6 +13,8 @@ import { CategoryId, Category, Product, ProductSize, Complement, Cobertura } fro
 import { Search } from 'lucide-react';
 import {
   getProducts,
+  getProductSizes,
+  attachProductSizes,
   getCategorias,
   getAcompanhamentos,
   getCoberturas,
@@ -69,17 +71,26 @@ function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
   const refreshMenuData = async () => {
     if (!menuRequest.current) {
       menuRequest.current = (async () => {
+        const categoriesRequest = getCategorias();
         try {
-          const [productsResult, categoriesResult] = await Promise.allSettled([
-            getProducts(),
-            getCategorias(),
-          ]);
-          setProducts(productsResult.status === 'fulfilled' ? productsResult.value : []);
-          setCategories(categoriesResult.status === 'fulfilled' ? categoriesResult.value : []);
-        } catch {
-          // ignore
-        } finally {
+          const currentProducts = await getProducts();
+          setProducts(currentProducts);
           setMenuLoaded(true);
+
+          // Sizes are useful for card price/quick selection, but never gate
+          // the first menu paint. They remain sourced from the current DB.
+          void getProductSizes().then((sizes) => {
+            setProducts((previous) => attachProductSizes(previous, sizes, true));
+          });
+        } catch {
+          setProducts([]);
+          setMenuLoaded(true);
+        } finally {
+          try {
+            setCategories(await categoriesRequest);
+          } catch {
+            setCategories([]);
+          }
           menuRequest.current = null;
         }
       })();
@@ -222,8 +233,15 @@ function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
     scrollToCategory('todos');
   };
 
-  const handleOpenCustomize = (product: Product, defaultSize?: ProductSize) => {
-    setCustomizingProduct({ product, defaultSize });
+  const handleOpenCustomize = async (product: Product, defaultSize?: ProductSize) => {
+    let productToCustomize = product;
+    const { isFixedPrice } = getCategoryFlags(product.categoryId, categories);
+    if (!isFixedPrice && !product.sizes?.length) {
+      const productSizes = await getProductSizes([product.id]);
+      productToCustomize = attachProductSizes([product], productSizes)[0];
+      setProducts((previous) => previous.map((item) => item.id === product.id ? productToCustomize : item));
+    }
+    setCustomizingProduct({ product: productToCustomize, defaultSize });
     if (!optionsLoaded.current) {
       optionsLoaded.current = true;
       Promise.all([getAcompanhamentos(), getCoberturas()]).then(([acomps, cobs]) => {
