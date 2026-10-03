@@ -312,13 +312,7 @@ function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
                       <p className="text-xs text-slate-500 hidden sm:block">Explore todo o nosso cardápio delicioso e monte seu pedido!</p>
                     </div>
                   </div>
-                  {filteredProducts.length ? (
-                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-4">
-                      {filteredProducts.map((product) => (
-                        <ProductCard key={product.id} product={product} categories={categories} selectedCategory="todos" onOpenCustomize={handleOpenCustomize} />
-                      ))}
-                    </div>
-                  ) : (
+                  {!filteredProducts.length && (
                     <div className="bg-white rounded-3xl p-8 text-center border border-purple-100 shadow-xs space-y-2">
                       <h3 className="font-extrabold text-slate-800 text-sm">Nenhum produto cadastrado ainda.</h3>
                     </div>

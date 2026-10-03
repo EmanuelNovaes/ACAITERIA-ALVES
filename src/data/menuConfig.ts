@@ -5,17 +5,17 @@ import {
   StoreConfig,
 } from '../types/menu';
 
-import heroBannerImg from '../assets/images/hero_banner_alves_1790429863758.jpg';
-import mascotImg from '/public/mascotenovo.png';
-import acaiTigelaCardImg from '../assets/images/acai_tigela_card_1790429880092.jpg';
-import acaiCopoCardImg from '../assets/images/acai_copo_card_1790429894196.jpg';
-import acaiZeroCardImg from '../assets/images/acai_zero_card_1790429906887.jpg';
-import acaiNatCardImg from '../assets/images/acai_nat_card_1790429925362.jpg';
-import salgadosImg from '../assets/images/salgados_coxinha_1790427486921.jpg';
-import churrosImg from '../assets/images/churros_doce_leite_1790427498511.jpg';
-import milkshakeImg from '../assets/images/milkshake_gourmet_1790427508507.jpg';
-import sorveteImg from '../assets/images/sorvete_gelato_1790427525055.jpg';
-import comboImg from '../assets/images/combo_especial_1790427541529.jpg';
+import heroBannerImg from '../assets/images/hero_banner_alves.webp';
+import mascotImg from '/mascotenovo.webp';
+import acaiTigelaCardImg from '../assets/images/acai_tigela_card_1790429880092.webp';
+import acaiCopoCardImg from '../assets/images/acai_copo_card_1790429894196.webp';
+import acaiZeroCardImg from '../assets/images/acai_zero_card_1790429906887.webp';
+import acaiNatCardImg from '../assets/images/acai_nat_card_1790429925362.webp';
+import salgadosImg from '../assets/images/salgados_coxinha_1790427486921.webp';
+import churrosImg from '../assets/images/churros_doce_leite_1790427498511.webp';
+import milkshakeImg from '../assets/images/milkshake_gourmet_1790427508507.webp';
+import sorveteImg from '../assets/images/sorvete_gelato_1790427525055.webp';
+import comboImg from '../assets/images/combo_especial_1790427541529.webp';
 
 export const ASSETS = {
   heroBanner: heroBannerImg,

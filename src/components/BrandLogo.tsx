@@ -20,7 +20,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   return (
     <div className={`flex items-center select-none ${className}`}>
       <img
-        src="/logo.png"
+        src="/logo.webp"
         alt="Açaiteria Alves"
         className={`${sizeClasses[size]} w-auto object-contain`}
       />

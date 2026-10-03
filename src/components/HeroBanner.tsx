@@ -20,6 +20,8 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({ onOrderNowClick }) => {
         <img
           src={ASSETS.heroBanner}
           alt="Açaiteria Alves - Sabor, qualidade e muito mais energia para o seu dia!"
+          width={1376}
+          height={768}
           className="w-full h-full object-cover object-center"
           loading="eager"
         />
