@@ -182,7 +182,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isEmbeddedDesktop = fals
                       )}
                       {item.notes && (
                         <p className="text-[9px] text-slate-400 italic mt-0.5">
-                          Obs: {item.notes}
+                          Observação: {item.notes}
                         </p>
                       )}
 

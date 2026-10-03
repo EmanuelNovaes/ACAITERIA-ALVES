@@ -6,7 +6,7 @@ import {
 } from '../types/menu';
 
 import heroBannerImg from '../assets/images/hero_banner_alves_1790429863758.jpg';
-import mascotImg from '../assets/images/mascote_acai_1790427572802.jpg';
+import mascotImg from '/public/mascotenovo.png';
 import acaiTigelaCardImg from '../assets/images/acai_tigela_card_1790429880092.jpg';
 import acaiCopoCardImg from '../assets/images/acai_copo_card_1790429894196.jpg';
 import acaiZeroCardImg from '../assets/images/acai_zero_card_1790429906887.jpg';

@@ -124,7 +124,19 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
         savedConfig.openingHours = '15:00 às 22:00';
         didMigrate = true;
       }
-      if (savedConfig.address === 'Av. Principal dos Sabores, 1200 - Centro') {
+
+      const isLegacyAddress = (addr?: string) => {
+        if (!addr) return true;
+        const normalized = addr.trim().toLowerCase();
+        return (
+          normalized === 'av. principal dos sabores, 1200 - centro' ||
+          normalized === 'itacuruba' ||
+          normalized === 'itacuruba - pe' ||
+          normalized === 'itacuruba-pe'
+        );
+      };
+
+      if (isLegacyAddress(savedConfig.address)) {
         savedConfig.address = 'R. Rozendo Alves Teixeira, Itacuruba - PE';
         didMigrate = true;
       }
@@ -148,6 +160,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
       return {
         ...INITIAL_STORE_CONFIG,
         ...savedConfig,
+        address: isLegacyAddress(savedConfig.address)
+          ? 'R. Rozendo Alves Teixeira, Itacuruba - PE'
+          : (savedConfig.address || INITIAL_STORE_CONFIG.address),
         deliveryFee: INITIAL_STORE_CONFIG.deliveryFee,
       };
     } catch {
@@ -298,7 +313,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
         .join('-');
 
     const notesPart =
-      (item.notes || '').trim().toLowerCase();
+      (item.notes || '').trim();
 
     return `${item.productId}__${sizePart}__${tipoPart}__${coberturaPart}__${complementsPart}__${notesPart}`;
   };
@@ -521,7 +536,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 
       if (item.notes && item.notes.trim()) {
         lines.push(
-          `Obs: ${item.notes.trim()}`
+          `Observação: ${item.notes.trim()}`
         );
       }
 

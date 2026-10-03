@@ -143,7 +143,7 @@ export const ProductOptionsModal: React.FC<ProductOptionsModalProps> = ({
       cobertura: supportsCobertura ? selectedCobertura : undefined,
       unitPrice,
       quantity,
-      notes: isAcai ? notes.trim() : '',
+      notes: notes.trim(),
     });
 
     onClose();
@@ -383,22 +383,19 @@ export const ProductOptionsModal: React.FC<ProductOptionsModalProps> = ({
             </div>
           )}
 
-          {/* Observações / Notes — somente Açaí */}
-          {isAcai && (
           <div className="pt-2 border-t border-slate-100 space-y-1.5">
             <label className="text-xs font-bold text-slate-800">
-              Observações (opcional):
+              Observação (opcional)
             </label>
             <input
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Ex: Caprichar no leite condensado, sem colher..."
+              placeholder="Digite uma observação..."
               className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-1 focus:ring-purple-600"
               maxLength={120}
             />
           </div>
-          )}
         </div>
 
         {/* Footer with Quantity Stepper and Add to Cart Button */}

@@ -102,8 +102,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigateToAdmin }) => {
 
             <div className="text-center">
 
-              <MascotDisplay size="sm" />
-
+              <MascotDisplay size="sm" className="scale-390" />
               <span className="block text-[11px] font-bold text-white mt-1">
                 Alves agradece sua visita! 💜
               </span>

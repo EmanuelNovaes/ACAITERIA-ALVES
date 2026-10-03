@@ -126,6 +126,7 @@ export const AdminSettingsModal: React.FC<AdminSettingsModalProps> = ({ isOpen, 
               type="text"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
+              placeholder="Ex: R. Rozendo Alves Teixeira, Itacuruba - PE"
               className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:ring-2 focus:ring-[#8ac627] focus:bg-white text-xs"
             />
           </div>
