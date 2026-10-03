@@ -1,7 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ShoppingCart, Sparkles } from 'lucide-react';
 import { Category, CategoryId, Product, ProductSize } from '../types/menu';
 import { getCategoryFlags, getProductTypeLabel, isComboCategory } from '../utils/categoryRules';
+import { diagnosticNow, reportPerformance } from '../utils/performanceDiagnostics';
+
+let firstProductCardCommitted = false;
+let firstProductImageLoaded = false;
+let firstProductCardRenderMeasured = false;
 
 interface ProductCardProps {
   product: Product;
@@ -16,6 +21,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   selectedCategory,
   onOpenCustomize,
 }) => {
+  const renderStartedAt = diagnosticNow();
   // Bebidas, Salgados e Churros: preço único, sem tamanhos, mostra "Valor"
   const { isFixedPrice, isAcai, isCombo, categoryName } = getCategoryFlags(
     product.categoryId,
@@ -34,6 +40,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const defaultSize = sizes.find((s) => s.isDefault) || sizes[0];
   const [selectedSize, setSelectedSize] = useState<ProductSize | undefined>(defaultSize);
 
+  useEffect(() => {
+    if (!firstProductCardCommitted) {
+      firstProductCardCommitted = true;
+      reportPerformance('ProductCard: primeira montagem React');
+    }
+  }, []);
+
   const formatCurrency = (val: number) => `R$ ${val.toFixed(2).replace('.', ',')}`;
 
   const currentPrice = !isFixedPrice && selectedSize ? selectedSize.price : product.basePrice;
@@ -45,6 +58,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         selectedCategory,
         categories?.find((category) => category.id === selectedCategory)?.name
       ));
+
+  if (!firstProductCardRenderMeasured) {
+    firstProductCardRenderMeasured = true;
+    reportPerformance('ProductCard: primeira execução da função componente', {}, diagnosticNow() - renderStartedAt);
+  }
 
   return (
     <div
@@ -59,6 +77,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           loading="lazy"
           decoding="async"
+          onLoad={() => {
+            if (!firstProductImageLoaded) {
+              firstProductImageLoaded = true;
+              reportPerformance('Imagem: primeira imagem de ProductCard carregada');
+            }
+          }}
         />
         {badgeLabel && (
           <span className="absolute top-1.5 left-1.5 bg-[#35074a]/90 backdrop-blur-xs text-white text-[9px] sm:text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1 max-w-[90%] truncate">

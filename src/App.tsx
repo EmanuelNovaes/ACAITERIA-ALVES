@@ -24,8 +24,13 @@ import { getCurrentSession } from './services/supabase';
 import { AdminLogin } from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import { getCategoryFlags, getProductTypes, isComboCategory, sortProductsForMenu } from './utils/categoryRules';
+import { diagnosticNow, reportPerformance } from './utils/performanceDiagnostics';
+
+reportPerformance('App module inicializado');
+let menuRefreshSequence = 0;
 
 function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
+  const renderStartedAt = diagnosticNow();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<CategoryId | 'todos'>('todos');
   const visibleSections = useRef(new Map<string, number>());
@@ -39,6 +44,10 @@ function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
   const [coberturas, setCoberturas] = useState<Cobertura[]>([]);
   const optionsLoaded = useRef(false);
   const menuRequest = useRef<Promise<void> | null>(null);
+  const firstFilterProcessingLogged = useRef(false);
+  const firstCategoryProcessingLogged = useRef(false);
+  const menuLoadedCommitLogged = useRef(false);
+  const firstMenuTreeRenderLogged = useRef(false);
 
   // A ordem recebida do Supabase é mantida na navegação e nas seções.
   const orderedCategories = categories;
@@ -70,16 +79,23 @@ function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
   // Fetch data from databaseService & subscribe to live admin updates
   const refreshMenuData = async () => {
     if (!menuRequest.current) {
+      const refreshId = ++menuRefreshSequence;
+      const refreshStartedAt = diagnosticNow();
+      reportPerformance('Menu: refresh iniciado', { refreshId });
       menuRequest.current = (async () => {
         const categoriesRequest = getCategorias();
         try {
           const currentProducts = await getProducts();
+          const productsReadyAt = diagnosticNow();
+          reportPerformance('Menu: produtos prontos para estado React', { refreshId, rows: currentProducts.length }, productsReadyAt - refreshStartedAt);
           setProducts(currentProducts);
           setMenuLoaded(true);
+          reportPerformance('Menu: setMenuLoaded(true) chamado', { refreshId, rows: currentProducts.length }, diagnosticNow() - refreshStartedAt);
 
           // Sizes are useful for card price/quick selection, but never gate
           // the first menu paint. They remain sourced from the current DB.
           void getProductSizes().then((sizes) => {
+            reportPerformance('Menu: tamanhos recebidos em segundo plano', { refreshId, rows: sizes.length }, diagnosticNow() - productsReadyAt);
             setProducts((previous) => attachProductSizes(previous, sizes, true));
           });
         } catch {
@@ -87,10 +103,13 @@ function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
           setMenuLoaded(true);
         } finally {
           try {
-            setCategories(await categoriesRequest);
+            const categories = await categoriesRequest;
+            setCategories(categories);
+            reportPerformance('Menu: categorias aplicadas', { refreshId, rows: categories.length }, diagnosticNow() - refreshStartedAt);
           } catch {
             setCategories([]);
           }
+          reportPerformance('Menu: refresh de dados concluído', { refreshId }, diagnosticNow() - refreshStartedAt);
           menuRequest.current = null;
         }
       })();
@@ -99,6 +118,7 @@ function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
   };
 
   useEffect(() => {
+    reportPerformance('MenuContent effect iniciou carregamento');
     refreshMenuData();
     const unsubscribe = subscribeToDatabase(() => {
       refreshMenuData();
@@ -107,6 +127,13 @@ function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
       unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (menuLoaded && !menuLoadedCommitLogged.current) {
+      menuLoadedCommitLogged.current = true;
+      reportPerformance('Menu: menuLoaded commitado pelo React');
+    }
+  }, [menuLoaded]);
 
   // Se a categoria selecionada foi excluída pelo ADM, volta para "Todos"
   // automaticamente para não deixar o cliente numa aba que já não existe.
@@ -122,6 +149,7 @@ function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
 
   // The main listing remains a single continuous menu; search filters its products.
   const filteredProducts = useMemo(() => {
+    const processingStartedAt = diagnosticNow();
     const filtered = products.filter((product) => {
       // Show only active products on the public menu
       if (product.active === false) return false;
@@ -139,36 +167,54 @@ function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
     });
 
     // Agrupa por ordem da categoria e ordena pelo menor preço dentro de cada grupo
-    return sortProductsForMenu(filtered, categories);
+    const sorted = sortProductsForMenu(filtered, categories);
+    if (menuLoaded && !firstFilterProcessingLogged.current) {
+      firstFilterProcessingLogged.current = true;
+      reportPerformance('Frontend: filtro e ordenação inicial concluídos', { inputRows: products.length, outputRows: sorted.length }, diagnosticNow() - processingStartedAt);
+    }
+    return sorted;
   }, [products, categories, searchQuery]);
 
   const featuredCombos = useMemo(() => {
-    return products.filter((p) => (p.isCombo || String(p.categoryId).toLowerCase().includes('combo') || categories.find((category) => category.id === p.categoryId)?.name.toLowerCase().includes('combo')) && p.active !== false);
+    const processingStartedAt = diagnosticNow();
+    const combos = products.filter((p) => (p.isCombo || String(p.categoryId).toLowerCase().includes('combo') || categories.find((category) => category.id === p.categoryId)?.name.toLowerCase().includes('combo')) && p.active !== false);
+    if (menuLoaded) {
+      reportPerformance('Frontend: seleção de combos concluída', { inputRows: products.length, outputRows: combos.length }, diagnosticNow() - processingStartedAt);
+    }
+    return combos;
   }, [products, categories]);
 
   const isComboProduct = (product: Product) =>
     product.isCombo === true || getCategoryFlags(product.categoryId, categories).isCombo;
 
-  const categorySections = useMemo(() => orderedCategories.map((category) => {
-    const categoryIsCombo = isComboCategory(category.id, category.name);
-    const sectionProducts = filteredProducts.filter((product) => categoryIsCombo
-      ? isComboProduct(product)
-      : product.categoryId === category.id && !isComboProduct(product));
-    const productTypes = getProductTypes(category.id, orderedCategories);
-    const groups = productTypes.length > 0
-      ? [
-        ...productTypes.map((type) => ({
-          id: type.value,
-          title: type.label,
-          products: sectionProducts.filter((product) => product.tipo === type.value),
-        })),
-        ...(sectionProducts.some((product) => !product.tipo || !productTypes.some((type) => type.value === product.tipo))
-          ? [{ id: 'legacy', title: categoryIsCombo ? 'Outros Combos' : 'Outros Açaís', products: sectionProducts.filter((product) => !product.tipo || !productTypes.some((type) => type.value === product.tipo)) }]
-          : []),
-      ]
-      : [{ id: 'all', title: '', products: sectionProducts }];
-    return { ...category, groups };
-  }), [orderedCategories, filteredProducts, categories]);
+  const categorySections = useMemo(() => {
+    const processingStartedAt = diagnosticNow();
+    const sections = orderedCategories.map((category) => {
+      const categoryIsCombo = isComboCategory(category.id, category.name);
+      const sectionProducts = filteredProducts.filter((product) => categoryIsCombo
+        ? isComboProduct(product)
+        : product.categoryId === category.id && !isComboProduct(product));
+      const productTypes = getProductTypes(category.id, orderedCategories);
+      const groups = productTypes.length > 0
+        ? [
+          ...productTypes.map((type) => ({
+            id: type.value,
+            title: type.label,
+            products: sectionProducts.filter((product) => product.tipo === type.value),
+          })),
+          ...(sectionProducts.some((product) => !product.tipo || !productTypes.some((type) => type.value === product.tipo))
+            ? [{ id: 'legacy', title: categoryIsCombo ? 'Outros Combos' : 'Outros Açaís', products: sectionProducts.filter((product) => !product.tipo || !productTypes.some((type) => type.value === product.tipo)) }]
+            : []),
+        ]
+        : [{ id: 'all', title: '', products: sectionProducts }];
+      return { ...category, groups };
+    });
+    if (menuLoaded && orderedCategories.length > 0 && !firstCategoryProcessingLogged.current) {
+      firstCategoryProcessingLogged.current = true;
+      reportPerformance('Frontend: agrupamento inicial por categorias concluído', { categories: orderedCategories.length, products: filteredProducts.length }, diagnosticNow() - processingStartedAt);
+    }
+    return sections;
+  }, [orderedCategories, filteredProducts, categories, menuLoaded]);
 
   useEffect(() => {
     if (searchQuery.trim()) return;
@@ -254,6 +300,11 @@ function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
   const handleCloseCustomize = () => {
     setCustomizingProduct(null);
   };
+
+  if (menuLoaded && !firstMenuTreeRenderLogged.current) {
+    firstMenuTreeRenderLogged.current = true;
+    reportPerformance('Frontend: MenuContent render inicial com menuLoaded', { products: products.length, categories: categories.length }, diagnosticNow() - renderStartedAt);
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f5f4f8] text-slate-800 selection:bg-[#b6f625] selection:text-[#1e032b]">
@@ -439,7 +490,10 @@ export default function App() {
   // Check auth session
   useEffect(() => {
     const verifyAuth = async () => {
+      const authStartedAt = diagnosticNow();
+      reportPerformance('App: verificação de sessão iniciada');
       const session = await getCurrentSession();
+      reportPerformance('App: verificação de sessão concluída', {}, diagnosticNow() - authStartedAt);
       const testSession = sessionStorage.getItem('acaiteria_admin_session_test');
       if (session || testSession === 'true') {
         setIsAdminAuthenticated(true);

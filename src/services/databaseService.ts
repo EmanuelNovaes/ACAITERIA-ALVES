@@ -7,10 +7,14 @@ import {
   Category,
   ProductSize,
 } from '../types/menu';
+import { diagnosticNow, reportPerformance } from '../utils/performanceDiagnostics';
 
 type Listener = () => void;
 
 const listeners = new Set<Listener>();
+let productRequestSequence = 0;
+let categoryRequestSequence = 0;
+let sizesRequestSequence = 0;
 
 export const subscribeToDatabase = (
   listener: Listener
@@ -48,7 +52,11 @@ export const getCachedCoberturas = (): Cobertura[] => [];
 // =============================================================
 
 export const getCategorias = async (): Promise<Category[]> => {
+  const requestId = ++categoryRequestSequence;
+  const requestStartedAt = diagnosticNow();
+  reportPerformance('Categorias: início', { requestId, selectColumns: 4, filters: ['ativo=true'], order: 'ordem ASC' });
   if (!isSupabaseConfigured()) {
+    reportPerformance('Categorias: Supabase não configurado', { requestId }, diagnosticNow() - requestStartedAt);
     return [];
   }
 
@@ -59,8 +67,11 @@ export const getCategorias = async (): Promise<Category[]> => {
       .eq('ativo', true)
       .order('ordem', { ascending: true });
 
+    const queryFinishedAt = diagnosticNow();
+    reportPerformance('Categorias: consulta concluída', { requestId, rows: data?.length ?? 0 }, queryFinishedAt - requestStartedAt);
     if (error) throw error;
 
+    const processingStartedAt = diagnosticNow();
     const categories = (data || []).map(
       (item: any) => ({
         id: item.id,
@@ -69,9 +80,11 @@ export const getCategorias = async (): Promise<Category[]> => {
         order: item.ordem ?? 0,
       })
     );
+    reportPerformance('Categorias: processamento concluído', { requestId, rows: categories.length }, diagnosticNow() - processingStartedAt);
 
     return categories;
   } catch (error) {
+    reportPerformance('Categorias: falha', { requestId, error: String(error) }, diagnosticNow() - requestStartedAt);
     console.error(
       'Erro ao carregar categorias do Supabase:',
       error
@@ -232,11 +245,22 @@ export const toggleCategoriaActive = async (
 // =============================================================
 
 export const getProducts = async (): Promise<Product[]> => {
+  const requestId = ++productRequestSequence;
+  const requestStartedAt = diagnosticNow();
+  reportPerformance('Produtos: início', {
+    requestId,
+    selectColumns: 10,
+    select: 'id,nome,categoria,descricao,imagem_url,preco_base,unidades,tipo,ativo,ordem',
+    order: 'ordem ASC',
+    filters: [],
+  });
   if (!isSupabaseConfigured()) {
+    reportPerformance('Produtos: Supabase não configurado', { requestId }, diagnosticNow() - requestStartedAt);
     return [];
   }
 
   try {
+    const queryStartedAt = diagnosticNow();
     const { data, error } = await supabase.from('produtos').select(`
         id,
         nome,
@@ -250,9 +274,12 @@ export const getProducts = async (): Promise<Product[]> => {
         ordem
       `).order('ordem', { ascending: true });
 
+    const queryFinishedAt = diagnosticNow();
+    reportPerformance('Produtos: consulta concluída', { requestId, rows: data?.length ?? 0 }, queryFinishedAt - queryStartedAt);
     if (error) throw error;
 
-    return (data || []).map((item: any) => ({
+    const processingStartedAt = diagnosticNow();
+    const products = (data || []).map((item: any) => ({
       id: item.id,
       name: item.nome,
       categoryId: item.categoria,
@@ -265,7 +292,10 @@ export const getProducts = async (): Promise<Product[]> => {
       order: item.ordem ?? 0,
       sizes: [],
     }));
+    reportPerformance('Produtos: processamento concluído', { requestId, rows: products.length }, diagnosticNow() - processingStartedAt);
+    return products;
   } catch (error) {
+    reportPerformance('Produtos: falha', { requestId, error: String(error) }, diagnosticNow() - requestStartedAt);
     console.error(
       'Erro ao carregar produtos do Supabase:',
       error
@@ -278,7 +308,13 @@ export const getProducts = async (): Promise<Product[]> => {
 export type LoadedProductSize = ProductSize & { productId: string };
 
 export const getProductSizes = async (productIds?: string[]): Promise<LoadedProductSize[]> => {
-  if (!isSupabaseConfigured() || productIds?.length === 0) return [];
+  const requestId = ++sizesRequestSequence;
+  const requestStartedAt = diagnosticNow();
+  reportPerformance('Tamanhos: início', { requestId, scope: productIds ? 'produto(s) específico(s)' : 'tabela completa', productCount: productIds?.length });
+  if (!isSupabaseConfigured() || productIds?.length === 0) {
+    reportPerformance('Tamanhos: consulta ignorada', { requestId, reason: !isSupabaseConfigured() ? 'Supabase não configurado' : 'lista de produtos vazia' }, diagnosticNow() - requestStartedAt);
+    return [];
+  }
 
   try {
     let query = supabase.from('produto_tamanhos').select(`
@@ -292,10 +328,14 @@ export const getProductSizes = async (productIds?: string[]): Promise<LoadedProd
     `);
     if (productIds) query = query.in('produto_id', productIds);
 
+    const queryStartedAt = diagnosticNow();
     const { data, error } = await query;
+    const queryFinishedAt = diagnosticNow();
+    reportPerformance('Tamanhos: consulta concluída', { requestId, rows: data?.length ?? 0 }, queryFinishedAt - queryStartedAt);
     if (error) throw error;
 
-    return (data || []).map((size: any) => ({
+    const processingStartedAt = diagnosticNow();
+    const sizes = (data || []).map((size: any) => ({
       id: size.id,
       productId: size.produto_id,
       label: size.nome,
@@ -304,7 +344,10 @@ export const getProductSizes = async (productIds?: string[]): Promise<LoadedProd
       maxComplements: Number(size.limite_acompanhamentos ?? 0),
       active: size.ativo !== false,
     }));
+    reportPerformance('Tamanhos: processamento concluído', { requestId, rows: sizes.length }, diagnosticNow() - processingStartedAt);
+    return sizes;
   } catch (error) {
+    reportPerformance('Tamanhos: falha', { requestId, error: String(error) }, diagnosticNow() - requestStartedAt);
     console.error('Erro ao carregar tamanhos dos produtos:', error);
     return [];
   }

@@ -2,6 +2,7 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import { reportPerformance } from './utils/performanceDiagnostics';
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -14,3 +15,4 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 );
+reportPerformance('React root render solicitado');
