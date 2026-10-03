@@ -16,8 +16,6 @@ import {
   getCategorias,
   getAcompanhamentos,
   getCoberturas,
-  getCachedAcompanhamentos,
-  getCachedCoberturas,
   subscribeToDatabase,
 } from './services/databaseService';
 import { getCurrentSession } from './services/supabase';
@@ -35,8 +33,8 @@ function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [menuLoaded, setMenuLoaded] = useState(false);
-  const [acompanhamentos, setAcompanhamentos] = useState<Complement[]>(getCachedAcompanhamentos);
-  const [coberturas, setCoberturas] = useState<Cobertura[]>(getCachedCoberturas);
+  const [acompanhamentos, setAcompanhamentos] = useState<Complement[]>([]);
+  const [coberturas, setCoberturas] = useState<Cobertura[]>([]);
   const optionsLoaded = useRef(false);
   const menuRequest = useRef<Promise<void> | null>(null);
 

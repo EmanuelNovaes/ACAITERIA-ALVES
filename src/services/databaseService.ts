@@ -7,36 +7,6 @@ import {
   Category,
 } from '../types/menu';
 
-import {
-  INITIAL_ACOMPANHAMENTOS,
-  INITIAL_COBERTURAS,
-} from '../data/menuConfig';
-
-const STORAGE_PRODUCTS_KEY =
-  'acaiteria_alves_db_products_v3';
-
-const STORAGE_CATEGORIAS_KEY =
-  'acaiteria_alves_db_categorias_v1';
-
-const STORAGE_ACOMPANHAMENTOS_KEY =
-  'acaiteria_alves_db_acompanhamentos_v3';
-
-const STORAGE_COBERTURAS_KEY =
-  'acaiteria_alves_db_coberturas_v3';
-
-// IDs pertencentes ao catálogo de demonstração antigo.
-// A migração remove somente esses registros do cache,
-// preservando produtos legítimos locais.
-const LEGACY_SAMPLE_PRODUCT_IDS = new Set([
-  'acai-copo',
-  'acai-marmita',
-  'acai-leitinho',
-  'acai-avela',
-  'acai-zero',
-  'acai-banana',
-  'acai-natural',
-]);
-
 type Listener = () => void;
 
 const listeners = new Set<Listener>();
@@ -65,85 +35,12 @@ const notifyListeners = () => {
 // CACHE DE PRODUTOS
 // =============================================================
 
-export const getCachedProducts = (): Product[] => {
-  try {
-    const saved = localStorage.getItem(
-      STORAGE_PRODUCTS_KEY
-    );
-
-    if (!saved) return [];
-
-    const cachedProducts = JSON.parse(saved) as Product[];
-
-    if (!Array.isArray(cachedProducts)) return [];
-
-    const currentProducts = cachedProducts.filter(
-      (product) =>
-        !LEGACY_SAMPLE_PRODUCT_IDS.has(product.id)
-    );
-
-    if (
-      currentProducts.length !==
-      cachedProducts.length
-    ) {
-      localStorage.setItem(
-        STORAGE_PRODUCTS_KEY,
-        JSON.stringify(currentProducts)
-      );
-    }
-
-    return currentProducts;
-  } catch {
-    return [];
-  }
-};
-
-export const getCachedCategorias = (): Category[] => {
-  try {
-    const saved = localStorage.getItem(
-      STORAGE_CATEGORIAS_KEY
-    );
-
-    const categories: Category[] = saved
-      ? JSON.parse(saved)
-      : [];
-
-    return categories.filter(
-      (category) => category.active !== false
-    );
-  } catch {
-    return [];
-  }
-};
-
-export const getCachedAcompanhamentos =
-  (): Complement[] => {
-    try {
-      const saved = localStorage.getItem(
-        STORAGE_ACOMPANHAMENTOS_KEY
-      );
-
-      return saved
-        ? JSON.parse(saved)
-        : INITIAL_ACOMPANHAMENTOS;
-    } catch {
-      return INITIAL_ACOMPANHAMENTOS;
-    }
-  };
-
-export const getCachedCoberturas = (): Cobertura[] => {
-  try {
-    const saved = localStorage.getItem(
-      STORAGE_COBERTURAS_KEY
-    );
-
-    return saved
-      ? JSON.parse(saved)
-      : INITIAL_COBERTURAS;
-  } catch {
-    return INITIAL_COBERTURAS;
-  }
-};
+// Legacy names kept for callers in the admin panel. Menu data is never
+// sourced from browser storage or bundled sample data.
+export const getCachedProducts = (): Product[] => [];
+export const getCachedCategorias = (): Category[] => [];
+export const getCachedAcompanhamentos = (): Complement[] => [];
+export const getCachedCoberturas = (): Cobertura[] => [];
 
 // =============================================================
 // CATEGORIAS
@@ -151,7 +48,7 @@ export const getCachedCoberturas = (): Cobertura[] => {
 
 export const getCategorias = async (): Promise<Category[]> => {
   if (!isSupabaseConfigured()) {
-    return getCachedCategorias();
+    return [];
   }
 
   try {
@@ -172,15 +69,6 @@ export const getCategorias = async (): Promise<Category[]> => {
       })
     );
 
-    try {
-      localStorage.setItem(
-        STORAGE_CATEGORIAS_KEY,
-        JSON.stringify(categories)
-      );
-    } catch {
-      // O cache é opcional.
-    }
-
     return categories;
   } catch (error) {
     console.error(
@@ -188,8 +76,7 @@ export const getCategorias = async (): Promise<Category[]> => {
       error
     );
 
-    // Se o Supabase falhar, tenta usar o cache.
-    return getCachedCategorias();
+    return [];
   }
 };
 
@@ -247,14 +134,7 @@ export const saveCategoria = async (
     )
     : [...list, newItem];
 
-  try {
-    localStorage.setItem(
-      STORAGE_CATEGORIAS_KEY,
-      JSON.stringify(updatedList)
-    );
-  } catch {
-    // Ignora erro de cache.
-  }
+
 
   notifyListeners();
 
@@ -296,14 +176,7 @@ export const deleteCategoria = async (
       category.id !== id
   );
 
-  try {
-    localStorage.setItem(
-      STORAGE_CATEGORIAS_KEY,
-      JSON.stringify(updatedList)
-    );
-  } catch {
-    // Ignora erro de cache.
-  }
+
 
   notifyListeners();
 
@@ -348,14 +221,7 @@ export const toggleCategoriaActive = async (
     }
   }
 
-  try {
-    localStorage.setItem(
-      STORAGE_CATEGORIAS_KEY,
-      JSON.stringify(list)
-    );
-  } catch {
-    // Ignora erro de cache.
-  }
+
 
   notifyListeners();
 };
@@ -365,35 +231,15 @@ export const toggleCategoriaActive = async (
 // =============================================================
 
 export const getProducts = async (): Promise<Product[]> => {
-  // Remove possíveis produtos antigos de demonstração
-  // que estejam armazenados no cache.
-  getCachedProducts();
-
   if (!isSupabaseConfigured()) {
-    return getCachedProducts();
+    return [];
   }
 
   try {
-    /*
-     * IMPORTANTE:
-     * Os produtos são buscados separadamente dos tamanhos.
-     *
-     * Antes, a consulta utilizava:
-     *
-     * produtos -> produto_tamanhos
-     *
-     * em uma única chamada.
-     *
-     * Se a relação do Supabase estivesse diferente,
-     * toda a consulta falhava e nenhum produto aparecia.
-     */
-
-    const {
-      data: productData,
-      error: productError,
-    } = await supabase
-      .from('produtos')
-      .select(`
+    // Produtos e tamanhos são leituras independentes: sobrepõe a latência
+    // de rede e agrupa tamanhos uma única vez antes de montar os produtos.
+    const [productQuery, sizesQuery] = await Promise.allSettled([
+      supabase.from('produtos').select(`
         id,
         nome,
         categoria,
@@ -404,32 +250,8 @@ export const getProducts = async (): Promise<Product[]> => {
         tipo,
         ativo,
         ordem
-      `)
-      .order('ordem', {
-        ascending: true,
-      });
-
-    if (productError) {
-      throw productError;
-    }
-
-    const rawProducts = productData || [];
-
-    /*
-     * Busca os tamanhos separadamente.
-     *
-     * Se essa parte falhar, os produtos continuam
-     * sendo carregados normalmente.
-     */
-    let sizesData: any[] = [];
-
-    try {
-      const {
-        data,
-        error,
-      } = await supabase
-        .from('produto_tamanhos')
-        .select(`
+      `).order('ordem', { ascending: true }),
+      supabase.from('produto_tamanhos').select(`
           id,
           produto_id,
           nome,
@@ -437,31 +259,29 @@ export const getProducts = async (): Promise<Product[]> => {
           preco,
           limite_acompanhamentos,
           ativo
-        `);
+        `),
+    ]);
 
-      if (error) {
-        console.warn(
-          'Não foi possível carregar os tamanhos dos produtos:',
-          error
-        );
-      } else {
-        sizesData = data || [];
-      }
-    } catch (error) {
+    if (productQuery.status === 'rejected') throw productQuery.reason;
+    const productResult = productQuery.value;
+    const sizesResult = sizesQuery.status === 'fulfilled' ? sizesQuery.value : null;
+    if (sizesQuery.status === 'rejected' || sizesResult?.error) {
       console.warn(
-        'Erro ao carregar tamanhos dos produtos:',
-        error
+        'Não foi possível carregar os tamanhos dos produtos:',
+        sizesQuery.status === 'rejected' ? sizesQuery.reason : sizesResult.error
       );
     }
+    const sizesByProduct = new Map<string, any[]>();
+    for (const size of sizesResult?.data || []) {
+      const productSizes = sizesByProduct.get(size.produto_id);
+      if (productSizes) productSizes.push(size);
+      else sizesByProduct.set(size.produto_id, [size]);
+    }
 
-    const products = rawProducts.map(
+    return (productResult.data || []).map(
       (item: any) => {
-        const productSizes = sizesData
-          .filter(
-            (size: any) =>
-              size.produto_id === item.id
-          )
-          .map((size: any) => ({
+        const productSizes = (sizesByProduct.get(item.id) || []).map(
+          (size: any) => ({
             id: size.id,
             label: size.nome,
             volume:
@@ -474,7 +294,8 @@ export const getProducts = async (): Promise<Product[]> => {
               ),
             active:
               size.ativo !== false,
-          }));
+          })
+        );
 
         return {
           id: item.id,
@@ -501,31 +322,13 @@ export const getProducts = async (): Promise<Product[]> => {
         };
       }
     );
-
-    try {
-      localStorage.setItem(
-        STORAGE_PRODUCTS_KEY,
-        JSON.stringify(products)
-      );
-    } catch {
-      // O cache é opcional.
-    }
-
-    return products;
   } catch (error) {
     console.error(
       'Erro ao carregar produtos do Supabase:',
       error
     );
 
-    /*
-     * Se o Supabase falhar, não deixa o cardápio
-     * simplesmente ficar vazio.
-     *
-     * Tenta recuperar os produtos já armazenados
-     * no cache local.
-     */
-    return getCachedProducts();
+    return [];
   }
 };
 
@@ -561,14 +364,7 @@ export const saveProduct = async (
       updatedProduct,
     ];
 
-  try {
-    localStorage.setItem(
-      STORAGE_PRODUCTS_KEY,
-      JSON.stringify(currentProducts)
-    );
-  } catch {
-    // O cache é opcional.
-  }
+
 
   notifyListeners();
 
@@ -685,14 +481,7 @@ export const restoreCachedProduct = (
     products.push(previous);
   }
 
-  try {
-    localStorage.setItem(
-      STORAGE_PRODUCTS_KEY,
-      JSON.stringify(products)
-    );
-  } catch {
-    // O cache é opcional.
-  }
+
 
   notifyListeners();
 };
@@ -753,14 +542,7 @@ export const deleteProduct = async (
         product.id !== productId
     );
 
-  try {
-    localStorage.setItem(
-      STORAGE_PRODUCTS_KEY,
-      JSON.stringify(currentProducts)
-    );
-  } catch {
-    // Ignora erro de cache.
-  }
+
 
   notifyListeners();
 
@@ -812,14 +594,7 @@ export const toggleProductActive = async (
     }
   }
 
-  try {
-    localStorage.setItem(
-      STORAGE_PRODUCTS_KEY,
-      JSON.stringify(currentProducts)
-    );
-  } catch {
-    // Ignora erro de cache.
-  }
+
 
   notifyListeners();
 };
@@ -862,31 +637,7 @@ export const getAcompanhamentos =
       }
     }
 
-    try {
-      const saved =
-        localStorage.getItem(
-          STORAGE_ACOMPANHAMENTOS_KEY
-        );
-
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch {
-      // Ignora erro.
-    }
-
-    try {
-      localStorage.setItem(
-        STORAGE_ACOMPANHAMENTOS_KEY,
-        JSON.stringify(
-          INITIAL_ACOMPANHAMENTOS
-        )
-      );
-    } catch {
-      // Ignora erro.
-    }
-
-    return INITIAL_ACOMPANHAMENTOS;
+    return [];
   };
 
 export const saveAcompanhamento =
@@ -953,14 +704,7 @@ export const saveAcompanhamento =
       ];
     }
 
-    try {
-      localStorage.setItem(
-        STORAGE_ACOMPANHAMENTOS_KEY,
-        JSON.stringify(list)
-      );
-    } catch {
-      // Ignora erro.
-    }
+
 
     notifyListeners();
   };
@@ -999,14 +743,7 @@ export const deleteAcompanhamento =
         item.id !== id
     );
 
-    try {
-      localStorage.setItem(
-        STORAGE_ACOMPANHAMENTOS_KEY,
-        JSON.stringify(list)
-      );
-    } catch {
-      // Ignora erro.
-    }
+
 
     notifyListeners();
   };
@@ -1053,14 +790,7 @@ export const toggleAcompanhamentoActive =
       }
     }
 
-    try {
-      localStorage.setItem(
-        STORAGE_ACOMPANHAMENTOS_KEY,
-        JSON.stringify(list)
-      );
-    } catch {
-      // Ignora erro.
-    }
+
 
     notifyListeners();
   };
@@ -1101,31 +831,7 @@ export const getCoberturas =
       }
     }
 
-    try {
-      const saved =
-        localStorage.getItem(
-          STORAGE_COBERTURAS_KEY
-        );
-
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch {
-      // Ignora erro.
-    }
-
-    try {
-      localStorage.setItem(
-        STORAGE_COBERTURAS_KEY,
-        JSON.stringify(
-          INITIAL_COBERTURAS
-        )
-      );
-    } catch {
-      // Ignora erro.
-    }
-
-    return INITIAL_COBERTURAS;
+    return [];
   };
 
 export const saveCobertura = async (
@@ -1190,14 +896,7 @@ export const saveCobertura = async (
     ];
   }
 
-  try {
-    localStorage.setItem(
-      STORAGE_COBERTURAS_KEY,
-      JSON.stringify(list)
-    );
-  } catch {
-    // Ignora erro.
-  }
+
 
   notifyListeners();
 };
@@ -1236,14 +935,7 @@ export const deleteCobertura =
         item.id !== id
     );
 
-    try {
-      localStorage.setItem(
-        STORAGE_COBERTURAS_KEY,
-        JSON.stringify(list)
-      );
-    } catch {
-      // Ignora erro.
-    }
+
 
     notifyListeners();
   };
@@ -1290,14 +982,7 @@ export const toggleCoberturaActive =
       }
     }
 
-    try {
-      localStorage.setItem(
-        STORAGE_COBERTURAS_KEY,
-        JSON.stringify(list)
-      );
-    } catch {
-      // Ignora erro.
-    }
+
 
     notifyListeners();
   };
