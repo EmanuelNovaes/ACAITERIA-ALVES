@@ -34,4 +34,6 @@ O schema do banco de dados está em `supabase_schema.sql`.
 
 Antes de publicar o checkout e o Dashboard, execute `supabase_migration_orders_dashboard.sql` no SQL Editor do mesmo projeto Supabase configurado em `.env`. A migração cria `clientes`, `pedidos`, `pedido_itens`, seus índices, políticas RLS e a RPC `registrar_pedido_checkout`; ela não é aplicada automaticamente pelo frontend.
 
-O checkout grava cada envio como `Pendente` antes de abrir o WhatsApp. No Dashboard, o administrador atualiza o status do pedido; apenas `Confirmado`, `Em preparo` e `Entregue` entram nas vendas e no faturamento. `Cancelado` e `Pendente` não são somados como vendas.
+O checkout registra cliente, pedido e itens em uma única transação antes de encaminhar ao WhatsApp. Todos os pedidos salvos são contabilizados automaticamente, sem status ou confirmação manual. O Dashboard atualiza enquanto estiver aberto e ao retornar à aba.
+
+Execute novamente a migração para adicionar a chave de idempotência às tabelas existentes e atualizar a RPC antes de publicar este frontend. A chave permite repetir uma tentativa sem duplicar o pedido.

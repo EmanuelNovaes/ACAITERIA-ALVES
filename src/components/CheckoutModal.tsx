@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useState } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import { X, Truck, Store, AlertCircle, ArrowRight } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { DeliveryType } from '../types/menu';
@@ -29,6 +29,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
   const [notes, setNotes] = useState(customerInfo.notes);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const submitting = useRef(false);
+  const checkoutAttempt = useRef<{ signature: string; key: string } | null>(null);
 
   useLayoutEffect(() => {
     if (isOpen) {
@@ -52,7 +54,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
   const formatCurrency = (val: number) => `R$ ${val.toFixed(2).replace('.', ',')}`;
 
   const handleSubmit = async () => {
-    if (saving) return;
+    if (submitting.current) return;
+    if (!items.length) { setError('Adicione itens ao pedido.'); return; }
     if (!storeIsOpen || !isStoreOpenAt()) { onClosedOrderAttempt?.(); return; }
     if (!name.trim()) {
       setError('Informe seu nome.');
@@ -90,21 +93,24 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
     // próxima vez, e envia a mensagem já com os dados atuais (finalInfo)
     // passados diretamente, sem depender do tempo de atualização do
     // estado do React.
+    submitting.current = true;
     setSaving(true);
-    const whatsappWindow = window.open('about:blank', '_blank');
-    if (whatsappWindow) whatsappWindow.opener = null;
     try {
       const orderSubtotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
       const deliveryFee = deliveryType === 'entrega' ? storeConfig.deliveryFee : 0;
-      await recordCheckoutOrder(finalInfo, items, orderSubtotal, deliveryFee, orderSubtotal + deliveryFee);
+      const signature = JSON.stringify([finalInfo, items, orderSubtotal, deliveryFee]);
+      if (checkoutAttempt.current?.signature !== signature) {
+        checkoutAttempt.current = { signature, key: crypto.randomUUID() };
+      }
+      await recordCheckoutOrder(finalInfo, items, orderSubtotal, deliveryFee, orderSubtotal + deliveryFee, checkoutAttempt.current.key);
+      sendOrderViaWhatsApp(finalInfo, null);
       setDeliveryType(deliveryType);
       updateCustomerInfo(finalInfo);
-      sendOrderViaWhatsApp(finalInfo, whatsappWindow);
       onConfirmed();
     } catch (e) {
-      whatsappWindow?.close();
       setError('Não foi possível salvar o pedido. Tente novamente antes de enviar pelo WhatsApp.');
     } finally {
+      submitting.current = false;
       setSaving(false);
     }
   };
@@ -117,6 +123,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
           <h2 className="text-lg sm:text-xl font-black text-[#2b0439]">Finalizar Pedido</h2>
           <button
             onClick={onClose}
+            disabled={saving}
             className="text-slate-400 hover:text-slate-700 transition-colors p-1 cursor-pointer"
             aria-label="Fechar"
           >
@@ -261,7 +268,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
           disabled={saving}
           className="w-full py-3 px-4 rounded-xl bg-[#b6f625] hover:bg-[#a6e61a] active:scale-98 text-[#1e032b] font-black text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
         >
-          <span>{saving ? 'Salvando pedido...' : 'Confirmar e enviar pelo WhatsApp'}</span>
+          <span>{saving ? 'Salvando pedido...' : 'Finalizar pedido'}</span>
           <ArrowRight className="w-4 h-4 stroke-[2.5]" />
         </button>
       </div>

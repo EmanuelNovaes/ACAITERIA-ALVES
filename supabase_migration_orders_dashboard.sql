@@ -44,6 +44,10 @@ create table if not exists public.pedido_itens (
   detalhes jsonb not null default '{}'::jsonb
 );
 
+-- Compatível com pedidos existentes; nenhuma linha é removida.
+alter table public.pedidos add column if not exists checkout_key uuid;
+create unique index if not exists pedidos_checkout_key_idx on public.pedidos(checkout_key);
+
 create index if not exists pedidos_created_at_idx on public.pedidos(created_at desc);
 create index if not exists pedidos_cliente_id_idx on public.pedidos(cliente_id);
 create index if not exists pedido_itens_pedido_id_idx on public.pedido_itens(pedido_id);
@@ -66,6 +70,9 @@ returns uuid language plpgsql security definer set search_path = public as $$
 declare
   v_cliente_id uuid;
   v_pedido_id uuid;
+  v_checkout_key uuid := (p_pedido->>'checkout_key')::uuid;
+  v_subtotal numeric;
+  v_taxa numeric;
   v_telefone text := regexp_replace(coalesce(p_cliente->>'telefone',''), '[^0-9]', '', 'g');
 begin
   if (length(v_telefone) in (12,13) and left(v_telefone,2) = '55') then
@@ -78,13 +85,37 @@ begin
     raise exception 'Dados do pedido inválidos';
   end if;
   if jsonb_array_length(p_itens) = 0 then raise exception 'O pedido deve conter pelo menos um item'; end if;
+  if v_checkout_key is not null then
+    -- Serializa apenas tentativas da mesma chave, inclusive respostas perdidas.
+    perform pg_advisory_xact_lock(hashtextextended(v_checkout_key::text, 0));
+    select id into v_pedido_id from public.pedidos where checkout_key = v_checkout_key;
+    if v_pedido_id is not null then return v_pedido_id; end if;
+  end if;
+  if exists (select 1 from jsonb_array_elements(p_itens) x
+    where coalesce(x->>'produto_id','') = '' or coalesce(trim(x->>'produto_nome'),'') = ''
+      or (x->>'quantidade')::numeric is null or (x->>'quantidade')::numeric <= 0
+      or (x->>'quantidade')::numeric <> trunc((x->>'quantidade')::numeric)
+      or (x->>'preco_unitario')::numeric is null or (x->>'preco_unitario')::numeric < 0
+      or (x->>'subtotal')::numeric is null
+      or round((x->>'subtotal')::numeric,2) <> round((x->>'quantidade')::numeric * (x->>'preco_unitario')::numeric,2)) then
+    raise exception 'Itens do pedido inválidos';
+  end if;
+  select sum(round((x->>'subtotal')::numeric,2)) into v_subtotal from jsonb_array_elements(p_itens) x;
+  v_taxa := (p_pedido->>'taxa_entrega')::numeric;
+  if v_taxa is null or v_taxa < 0 or (p_pedido->>'subtotal')::numeric is null
+    or (p_pedido->>'total')::numeric is null
+    or round((p_pedido->>'subtotal')::numeric,2) <> v_subtotal
+    or round((p_pedido->>'total')::numeric,2) <> v_subtotal + round(v_taxa,2)
+    or coalesce(p_pedido->>'tipo_entrega','') not in ('entrega','retirada') then
+    raise exception 'Valores do pedido inválidos';
+  end if;
   insert into public.clientes(nome, telefone, endereco, ultimo_pedido_em)
   values (trim(p_cliente->>'nome'), v_telefone, coalesce(p_cliente->>'endereco',''), now())
   on conflict (telefone) do update set nome = excluded.nome, endereco = excluded.endereco, ultimo_pedido_em = now()
   returning id into v_cliente_id;
 
-  insert into public.pedidos(cliente_id, subtotal, taxa_entrega, total, tipo_entrega, endereco, bairro, ponto_referencia, forma_pagamento, observacoes)
-  values (v_cliente_id, (p_pedido->>'subtotal')::numeric, (p_pedido->>'taxa_entrega')::numeric, (p_pedido->>'total')::numeric,
+  insert into public.pedidos(checkout_key, cliente_id, subtotal, taxa_entrega, total, tipo_entrega, endereco, bairro, ponto_referencia, forma_pagamento, observacoes)
+  values (v_checkout_key, v_cliente_id, (p_pedido->>'subtotal')::numeric, (p_pedido->>'taxa_entrega')::numeric, (p_pedido->>'total')::numeric,
     p_pedido->>'tipo_entrega', coalesce(p_pedido->>'endereco',''), coalesce(p_pedido->>'bairro',''),
     coalesce(p_pedido->>'ponto_referencia',''), coalesce(p_pedido->>'forma_pagamento',''), coalesce(p_pedido->>'observacoes',''))
   returning id into v_pedido_id;
