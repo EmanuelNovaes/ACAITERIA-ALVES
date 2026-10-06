@@ -5,7 +5,6 @@ import {
   StoreConfig,
 } from '../types/menu';
 
-import heroBannerImg from '../assets/images/hero_banner_alves.webp';
 import mascotImg from '/mascotenovo.webp';
 import acaiTigelaCardImg from '../assets/images/acai_tigela_card_1790429880092.webp';
 import acaiCopoCardImg from '../assets/images/acai_copo_card_1790429894196.webp';
@@ -18,7 +17,6 @@ import sorveteImg from '../assets/images/sorvete_gelato_1790427525055.webp';
 import comboImg from '../assets/images/combo_especial_1790427541529.webp';
 
 export const ASSETS = {
-  heroBanner: heroBannerImg,
   mascot: mascotImg,
   acaiTigela: acaiTigelaCardImg,
   acaiCopo: acaiCopoCardImg,

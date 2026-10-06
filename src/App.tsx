@@ -23,9 +23,13 @@ import {
 import { getCurrentSession } from './services/supabase';
 import { AdminLogin } from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
+const SalesDashboard = React.lazy(() => import('./pages/SalesDashboard'));
 import { getCategoryFlags, getProductTypes, isComboCategory, sortProductsForMenu } from './utils/categoryRules';
+import { isStoreOpenAt } from './utils/storeHours';
 
 function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
+  const [storeIsOpen, setStoreIsOpen] = useState(() => isStoreOpenAt());
+  const [showClosedNotice, setShowClosedNotice] = useState(() => !isStoreOpenAt());
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<CategoryId | 'todos'>('todos');
   const visibleSections = useRef(new Map<string, number>());
@@ -39,6 +43,11 @@ function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
   const [coberturas, setCoberturas] = useState<Cobertura[]>(getCachedCoberturas);
   const optionsLoaded = useRef(false);
   const menuRequest = useRef<Promise<void> | null>(null);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setStoreIsOpen(isStoreOpenAt()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   // A ordem recebida do Supabase é mantida na navegação e nas seções.
   const orderedCategories = categories;
@@ -249,6 +258,7 @@ function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
         onSelectCategory={scrollToCategory}
         onNavigateToAdmin={onNavigateToAdmin}
         categories={orderedCategories}
+        storeIsOpen={storeIsOpen}
       />
 
       <main className="flex-1 max-w-[1360px] w-full mx-auto px-2.5 sm:px-6 pb-20 md:pb-12">
@@ -349,7 +359,7 @@ function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
           {/* Right Column: Desktop Sidebar matching image.png */}
           <div className="hidden lg:block lg:col-span-4 xl:col-span-3 space-y-5">
             {/* Top: Meu pedido Card */}
-            <CartDrawer isEmbeddedDesktop={true} />
+            <CartDrawer isEmbeddedDesktop={true} storeIsOpen={storeIsOpen} onClosedOrderAttempt={() => setShowClosedNotice(true)} />
 
             {/* Bottom: Combos em destaque Card if available */}
             {featuredCombos.length > 0 && (
@@ -377,7 +387,17 @@ function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
       />
 
       {/* Mobile Drawer Slide-over Cart */}
-      <CartDrawer isEmbeddedDesktop={false} />
+      <CartDrawer isEmbeddedDesktop={false} storeIsOpen={storeIsOpen} onClosedOrderAttempt={() => setShowClosedNotice(true)} />
+
+      {showClosedNotice && !storeIsOpen && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4">
+          <section role="dialog" aria-modal="true" aria-labelledby="store-closed-title" className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+            <h2 id="store-closed-title" className="text-xl font-black text-[#35074a]">A Açaiteria Alves está fechada no momento 💜</h2>
+            <p className="mt-3 text-sm leading-6 text-slate-600">Nosso horário de atendimento é das 15:00 às 23:30. Você pode continuar visualizando nosso cardápio e montar seu carrinho, mas os pedidos só poderão ser finalizados durante o horário de funcionamento.</p>
+            <button onClick={() => setShowClosedNotice(false)} className="mt-5 w-full rounded-xl bg-[#4b1764] px-4 py-3 font-black text-white">Entendi</button>
+          </section>
+        </div>
+      )}
 
       {/* Customization Options Modal (Sections 4-9) */}
       <ProductOptionsModal
@@ -435,6 +455,17 @@ export default function App() {
   };
 
   // Section 15: If accessing /admin or /admin/painel without authentication -> redirect to /admin/login
+  if (currentPath === '/admin/dashboard') {
+    if (!isAdminAuthenticated) {
+      return <AdminLogin onLoginSuccess={() => { setIsAdminAuthenticated(true); navigate('/admin/dashboard'); }} onNavigateToCardapio={() => navigate('/')} />;
+    }
+    return (
+      <React.Suspense fallback={<div className="min-h-screen bg-[#f7f5f9] p-10 text-center font-semibold text-purple-800">Carregando Dashboard…</div>}>
+        <SalesDashboard onBack={() => navigate('/admin')} />
+      </React.Suspense>
+    );
+  }
+
   if (currentPath === '/admin' || currentPath === '/admin/painel') {
     if (!isAdminAuthenticated) {
       return (
@@ -454,6 +485,7 @@ export default function App() {
           navigate('/admin/login');
         }}
         onNavigateToCardapio={() => navigate('/')}
+        onNavigateToDashboard={() => navigate('/admin/dashboard')}
       />
     );
   }
@@ -468,6 +500,7 @@ export default function App() {
             navigate('/admin/login');
           }}
           onNavigateToCardapio={() => navigate('/')}
+          onNavigateToDashboard={() => navigate('/admin/dashboard')}
         />
       );
     }

@@ -19,6 +19,7 @@ import {
   List,
   IceCream,
   Power,
+  LayoutDashboard,
 } from 'lucide-react';
 
 import { getCategoryFlags, getProductTypes } from '../utils/categoryRules';
@@ -105,9 +106,11 @@ const emptySize = (): ProductSize => ({
 export default function AdminDashboard({
   onLogout,
   onNavigateToCardapio,
+  onNavigateToDashboard,
 }: {
   onLogout: () => void;
   onNavigateToCardapio: () => void;
+  onNavigateToDashboard: () => void;
 }) {
   const [activeTab, setActiveTab] =
     useState<AdminTab>('produtos');
@@ -974,6 +977,7 @@ export default function AdminDashboard({
               Gerencie produtos, categorias e opções do cardápio.
             </p>
           </div>
+          <button type="button" onClick={onNavigateToDashboard} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#4b1764] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#35074a]"><LayoutDashboard size={18}/>Dashboard</button>
         </div>
 
         {/* FEEDBACK */}

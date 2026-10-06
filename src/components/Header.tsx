@@ -18,6 +18,7 @@ interface HeaderProps {
   onOpenSettings?: () => void;
   onNavigateToAdmin?: () => void;
   categories?: Category[];
+  storeIsOpen?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -27,6 +28,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectCategory,
   onNavigateToAdmin,
   categories = [],
+  storeIsOpen = true,
 }) => {
   const { itemCount, openCart } = useCart();
 
@@ -182,6 +184,7 @@ export const Header: React.FC<HeaderProps> = ({
                 size="md"
                 variant="white"
               />
+              <span className={`ml-1 hidden shrink-0 rounded-full px-1.5 py-1 text-[9px] font-black min-[360px]:inline-flex sm:ml-2 sm:px-2 sm:text-[10px] ${storeIsOpen ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-700'}`}>{storeIsOpen ? '🟢 Aberto' : '🔴 Fechado'}</span>
             </button>
           </div>
 

@@ -2,17 +2,22 @@ import React, { useLayoutEffect, useState } from 'react';
 import { X, Truck, Store, AlertCircle, ArrowRight } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { DeliveryType } from '../types/menu';
+import { formatBrazilPhone, isValidBrazilPhone } from '../utils/phone';
+import { recordCheckoutOrder } from '../services/ordersService';
+import { isStoreOpenAt } from '../utils/storeHours';
 
 interface CheckoutModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirmed: () => void;
+  storeIsOpen?: boolean;
+  onClosedOrderAttempt?: () => void;
 }
 
 const PAYMENT_METHODS = ['Pix', 'Dinheiro', 'Cartão de Crédito', 'Cartão de Débito'];
 
-export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onConfirmed }) => {
-  const { customerInfo, updateCustomerInfo, setDeliveryType, storeConfig, sendOrderViaWhatsApp } = useCart();
+export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onConfirmed, storeIsOpen = true, onClosedOrderAttempt }) => {
+  const { customerInfo, items, updateCustomerInfo, setDeliveryType, storeConfig, sendOrderViaWhatsApp } = useCart();
 
   const [name, setName] = useState(customerInfo.name);
   const [phone, setPhone] = useState(customerInfo.phone);
@@ -23,10 +28,21 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
   const [paymentMethod, setPaymentMethod] = useState(customerInfo.paymentMethod || 'Pix');
   const [notes, setNotes] = useState(customerInfo.notes);
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useLayoutEffect(() => {
-    if (isOpen) setNotes('');
-  }, [isOpen]);
+    if (isOpen) {
+      setName(customerInfo.name);
+      setPhone(formatBrazilPhone(customerInfo.phone));
+      setLocalDeliveryType(customerInfo.deliveryType);
+      setAddress(customerInfo.address);
+      setNeighborhood(customerInfo.neighborhood);
+      setReferencePoint(customerInfo.referencePoint);
+      setPaymentMethod(customerInfo.paymentMethod || 'Pix');
+      setNotes('');
+      setError('');
+    }
+  }, [isOpen, customerInfo]);
 
   if (!isOpen) return null;
 
@@ -35,13 +51,15 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
 
   const formatCurrency = (val: number) => `R$ ${val.toFixed(2).replace('.', ',')}`;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (saving) return;
+    if (!storeIsOpen || !isStoreOpenAt()) { onClosedOrderAttempt?.(); return; }
     if (!name.trim()) {
       setError('Informe seu nome.');
       return;
     }
-    if (!phone.trim()) {
-      setError('Informe seu telefone.');
+    if (!isValidBrazilPhone(phone)) {
+      setError('Informe um telefone válido com DDD.');
       return;
     }
     if (deliveryType === 'entrega') {
@@ -59,7 +77,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
 
     const finalInfo = {
       name: name.trim(),
-      phone: phone.trim(),
+      phone: formatBrazilPhone(phone),
       deliveryType,
       address: deliveryType === 'entrega' ? address.trim() : '',
       neighborhood: deliveryType === 'entrega' ? neighborhood.trim() : '',
@@ -72,10 +90,23 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
     // próxima vez, e envia a mensagem já com os dados atuais (finalInfo)
     // passados diretamente, sem depender do tempo de atualização do
     // estado do React.
-    setDeliveryType(deliveryType);
-    updateCustomerInfo(finalInfo);
-    sendOrderViaWhatsApp(finalInfo);
-    onConfirmed();
+    setSaving(true);
+    const whatsappWindow = window.open('about:blank', '_blank');
+    if (whatsappWindow) whatsappWindow.opener = null;
+    try {
+      const orderSubtotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
+      const deliveryFee = deliveryType === 'entrega' ? storeConfig.deliveryFee : 0;
+      await recordCheckoutOrder(finalInfo, items, orderSubtotal, deliveryFee, orderSubtotal + deliveryFee);
+      setDeliveryType(deliveryType);
+      updateCustomerInfo(finalInfo);
+      sendOrderViaWhatsApp(finalInfo, whatsappWindow);
+      onConfirmed();
+    } catch (e) {
+      whatsappWindow?.close();
+      setError('Não foi possível salvar o pedido. Tente novamente antes de enviar pelo WhatsApp.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -110,7 +141,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
             <input
               type="tel"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => setPhone(formatBrazilPhone(e.target.value))}
               placeholder="Ex: (87) 99999-9999"
               className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-300"
             />
@@ -227,9 +258,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, o
 
         <button
           onClick={handleSubmit}
+          disabled={saving}
           className="w-full py-3 px-4 rounded-xl bg-[#b6f625] hover:bg-[#a6e61a] active:scale-98 text-[#1e032b] font-black text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
         >
-          <span>Confirmar e enviar pelo WhatsApp</span>
+          <span>{saving ? 'Salvando pedido...' : 'Confirmar e enviar pelo WhatsApp'}</span>
           <ArrowRight className="w-4 h-4 stroke-[2.5]" />
         </button>
       </div>

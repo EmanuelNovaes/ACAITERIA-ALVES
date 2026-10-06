@@ -15,9 +15,11 @@ import { CheckoutModal } from './CheckoutModal';
 
 interface CartDrawerProps {
   isEmbeddedDesktop?: boolean;
+  storeIsOpen?: boolean;
+  onClosedOrderAttempt?: () => void;
 }
 
-export const CartDrawer: React.FC<CartDrawerProps> = ({ isEmbeddedDesktop = false }) => {
+export const CartDrawer: React.FC<CartDrawerProps> = ({ isEmbeddedDesktop = false, storeIsOpen = true, onClosedOrderAttempt }) => {
   const {
     items,
     isCartOpen,
@@ -64,6 +66,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isEmbeddedDesktop = fals
 
   const handleCheckout = () => {
     if (items.length === 0) return;
+    if (!storeIsOpen) { onClosedOrderAttempt?.(); return; }
     setIsCheckoutOpen(true);
   };
 
@@ -284,6 +287,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isEmbeddedDesktop = fals
           isOpen={isCheckoutOpen}
           onClose={() => setIsCheckoutOpen(false)}
           onConfirmed={handleOrderConfirmed}
+          storeIsOpen={storeIsOpen}
+          onClosedOrderAttempt={onClosedOrderAttempt}
         />
       </>
     );
@@ -301,6 +306,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({ isEmbeddedDesktop = fals
         isOpen={isCheckoutOpen}
         onClose={() => setIsCheckoutOpen(false)}
         onConfirmed={handleOrderConfirmed}
+        storeIsOpen={storeIsOpen}
+        onClosedOrderAttempt={onClosedOrderAttempt}
       />
     </>
   );

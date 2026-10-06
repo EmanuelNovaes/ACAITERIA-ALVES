@@ -50,7 +50,7 @@ interface CartContextType {
 
   resetStoreConfig: () => void;
 
-  sendOrderViaWhatsApp: (overrideInfo?: Partial<CustomerOrderInfo>) => boolean;
+  sendOrderViaWhatsApp: (overrideInfo?: Partial<CustomerOrderInfo>, popupWindow?: Window | null) => boolean;
 
   lastOrderSent: boolean;
 
@@ -460,7 +460,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
   // =========================================================
 
   const sendOrderViaWhatsApp = (
-    overrideInfo?: Partial<CustomerOrderInfo>
+    overrideInfo?: Partial<CustomerOrderInfo>,
+    popupWindow?: Window | null,
   ): boolean => {
     if (items.length === 0) {
       return false;
@@ -694,11 +695,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
     const whatsappUrl =
       `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
 
-    window.open(
-      whatsappUrl,
-      '_blank',
-      'noopener,noreferrer'
-    );
+    if (popupWindow && !popupWindow.closed) {
+      popupWindow.location.href = whatsappUrl;
+    } else if (popupWindow === null) {
+      window.location.assign(whatsappUrl);
+    } else {
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+    }
 
     setLastOrderSent(true);
 
