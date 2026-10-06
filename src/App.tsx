@@ -318,8 +318,7 @@ function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
                 <section data-category-section="todos" className="scroll-mt-32 lg:scroll-mt-24">
                   <div className="pb-1 px-1 mb-3">
                     <div>
-                      <h2 className="text-lg sm:text-2xl font-black text-[#2e053f]">Todos os Produtos</h2>
-                      <p className="text-xs text-slate-500 hidden sm:block">Explore todo o nosso cardápio delicioso e monte seu pedido!</p>
+                      <h2 className="max-w-full whitespace-normal break-words text-lg sm:text-2xl font-black text-[#2e053f]">Explore todo o nosso cardápio delicioso e monte seu pedido!</h2>
                     </div>
                   </div>
                   {!filteredProducts.length && (

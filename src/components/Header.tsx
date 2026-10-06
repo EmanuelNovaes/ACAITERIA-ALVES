@@ -58,10 +58,6 @@ export const Header: React.FC<HeaderProps> = ({
     id: CategoryId | 'todos';
     label: string;
   }[] = [
-      {
-        id: 'todos',
-        label: 'Todos',
-      },
       ...categories.map((cat) => ({
         id: cat.id,
         label: cat.name,
@@ -204,33 +200,6 @@ export const Header: React.FC<HeaderProps> = ({
               no-scrollbar
             "
           >
-            {/* Todos */}
-
-            <button
-              onClick={() =>
-                onSelectCategory('todos')
-              }
-              className={`
-                text-xs
-                xl:text-sm
-                font-bold
-                transition-all
-                cursor-pointer
-                py-1.5
-                px-2
-                xl:px-3
-                rounded-lg
-                whitespace-nowrap
-                shrink-0
-                ${selectedCategory === 'todos'
-                  ? 'text-[#8ac627] bg-white/10'
-                  : 'text-purple-100 hover:text-[#8ac627] hover:bg-white/5'
-                }
-              `}
-            >
-              Todos
-            </button>
-
             {/* Categorias dinâmicas */}
 
             {categories.map((cat) => {
