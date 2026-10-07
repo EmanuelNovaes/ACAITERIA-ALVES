@@ -23,7 +23,7 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
-  // Supabase stays network-only so menu data and API responses are always fresh.
+  // O Supabase usa apenas a rede para manter os dados do cardápio e as respostas da API sempre atualizados.
   if (url.hostname === 'supabase.co' || url.hostname.endsWith('.supabase.co') ||
       url.hostname === 'supabase.in' || url.hostname.endsWith('.supabase.in')) return;
 
@@ -41,7 +41,7 @@ self.addEventListener('fetch', (event) => {
           try {
             await cache.put('/', response.clone());
           } catch {
-            // A full or unavailable cache must not prevent the site from loading.
+            // Um cache cheio ou indisponível não deve impedir o carregamento do site.
           }
         }
         return response;
@@ -60,8 +60,8 @@ self.addEventListener('fetch', (event) => {
   const isLocalStatic = url.origin === self.location.origin && STATIC_FILE.test(url.pathname);
   if (!isImage && !isLocalStatic) return;
 
-  // Only cache same-origin files. This includes local images and static assets,
-  // while excluding external APIs and keeping Supabase outside the cache.
+  // Armazena em cache apenas arquivos da mesma origem, incluindo imagens locais e recursos estáticos,
+  // excluindo APIs externas e mantendo o Supabase fora do cache.
   if (url.origin !== self.location.origin) return;
 
   event.respondWith((async () => {
@@ -79,7 +79,7 @@ self.addEventListener('fetch', (event) => {
       try {
         await cache.put(request, response.clone());
       } catch {
-        // A full or unavailable cache must not prevent an asset from loading.
+        // Um cache cheio ou indisponível não deve impedir o carregamento de um recurso.
       }
     }
     return response;
