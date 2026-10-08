@@ -8,7 +8,8 @@ const load = async (path, replacements = []) => {
 };
 const rulesSource = stripTypeScriptTypes(readFileSync('src/utilitarios/RegrasCategorias.ts', 'utf8').replace(/import .* from .*;\r?\n/, ''));
 const rulesUrl = 'data:text/javascript;base64,' + Buffer.from(rulesSource).toString('base64');
-const { buildWhatsAppOrderMessage: message } = await load('src/utilitarios/MensagemPedido.ts', [["'./RegrasCategorias'", JSON.stringify(rulesUrl)]]);
+const coberturasUrl = 'data:text/javascript;base64,' + Buffer.from(stripTypeScriptTypes(readFileSync('src/utilitarios/Coberturas.ts', 'utf8'))).toString('base64');
+const { buildWhatsAppOrderMessage: message } = await load('src/utilitarios/MensagemPedido.ts', [["'./RegrasCategorias'", JSON.stringify(rulesUrl)], ["'./Coberturas'", JSON.stringify(coberturasUrl)]]);
 const { validateOptionGroups: validate } = await load('src/utilitarios/ValidacaoOpcoes.ts');
 const info = { name: 'Emanuel', phone: '87988435251', deliveryType: 'retirada', address: 'Rua X, 100', neighborhood: 'Centro', referencePoint: '', paymentMethod: 'Pix', notes: '' };
 const simple = { productName: 'Coca-Cola Lata', quantity: 1, totalPrice: 6, selectedComplements: [] };
@@ -28,4 +29,9 @@ test('I três de quatro bloqueados', () => assert.ok(validate(groups(3, 0))));
 test('J três acompanhamentos e uma cobertura permitidos', () => assert.equal(validate(groups(3, 1)), undefined));
 test('K configurações diferentes e máximo', () => { assert.equal(validate(groups(6, 1, 6)), undefined); assert.ok(validate(groups(5, 1, 6))); assert.ok(validate(groups(4, 1))); assert.ok(validate(groups(3, 2))); assert.equal(validate([]), undefined); });
 test('Campos vazios e emojis omitidos', () => { const m = message([{ ...simple, notes: '  🛵 ', cobertura: ' ' }], { ...info, notes: '  🛍️ ' }, 6, 0); assert.doesNotMatch(m, /Observa|Cobertura|\p{Extended_Pictographic}/u); });
+test('Múltiplas coberturas preservadas no WhatsApp sem IDs', () => {
+  const m = message([{ ...acai, coberturas: [{id:'interno-a',name:'Morango'}, {id:'interno-b',name:'Chocolate'}, {id:'interno-c',name:'Caramelo'}] }], info, 22, 0);
+  assert.match(m, /• Coberturas: Morango, Chocolate, Caramelo/);
+  assert.doesNotMatch(m, /interno-|Abacaxi|\p{Extended_Pictographic}/u);
+});
 console.log(`${passed} testes passaram.`);

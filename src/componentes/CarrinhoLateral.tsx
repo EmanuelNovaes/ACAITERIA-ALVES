@@ -1,3 +1,5 @@
+import { ENFORCE_STORE_HOURS } from '../utilitarios/HorarioLoja';
+import { getSelectedCoberturas } from '../utilitarios/Coberturas';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   X,
@@ -66,7 +68,7 @@ export const CarrinhoLateral: React.FC<PropriedadesCarrinhoLateral> = ({ isEmbed
 
   const handleCheckout = () => {
     if (items.length === 0) return;
-    if (!storeIsOpen) { onClosedOrderAttempt?.(); return; }
+    if (ENFORCE_STORE_HOURS && !storeIsOpen) { onClosedOrderAttempt?.(); return; }
     setIsCheckoutOpen(true);
   };
 
@@ -178,9 +180,9 @@ export const CarrinhoLateral: React.FC<PropriedadesCarrinhoLateral> = ({ isEmbed
                           {item.selectedComplements.map((c) => c.name).join(', ')}
                         </p>
                       )}
-                      {item.cobertura && (
+                      {getSelectedCoberturas(item).length > 0 && (
                         <p className="text-[10px] font-semibold text-slate-600 mt-0.5">
-                          Cobertura: <span className="text-purple-900">{item.cobertura}</span>
+                          Cobertura: <span className="text-purple-900">{getSelectedCoberturas(item).map(c => c.name).join(', ')}</span>
                         </p>
                       )}
                       {item.notes && (

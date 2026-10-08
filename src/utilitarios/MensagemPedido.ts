@@ -1,3 +1,4 @@
+import { getSelectedCoberturas } from './Coberturas';
 import type { CartItem, CustomerOrderInfo } from '../tipos/Cardapio';
 import { getProductTypeLabel } from './RegrasCategorias';
 
@@ -33,7 +34,8 @@ export function buildWhatsAppOrderMessage(
     if (type && clean(type).toLocaleUpperCase('pt-BR') !== name.toLocaleUpperCase('pt-BR')) option('Tipo', type);
     if (item.isCombo && item.units != null) option('Unidades no combo', String(item.units));
     option('Tamanho', item.selectedSize?.label);
-    option('Cobertura', item.cobertura);
+    const coberturas = getSelectedCoberturas(item);
+    option(coberturas.length > 1 ? 'Coberturas' : 'Cobertura', coberturas.map(c => c.name).join(', '));
     option('Complementos', (item.selectedComplements || []).map(c => clean(c.name)).filter(Boolean).join(', '));
     option('Observação', item.notes);
     lines.push(`   ${currency(item.totalPrice)}`, '');

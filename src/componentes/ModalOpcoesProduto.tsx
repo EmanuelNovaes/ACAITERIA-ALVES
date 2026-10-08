@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import { X, Check, Plus, Minus, AlertCircle } from 'lucide-react';
 import { Category, Product, ProductSize, Complement, Cobertura } from '../tipos/Cardapio';
 import { getCategoryFlags, getProductTypeLabel } from '../utilitarios/RegrasCategorias';
-import { validateOptionGroups } from '../utilitarios/ValidacaoOpcoes';
+import { validateOptionGroups, initializeCoberturas, toggleGroupSelection, REGRAS_COBERTURA } from '../utilitarios/ValidacaoOpcoes';
 import { usarCarrinho } from '../contexto/ContextoCarrinho';
 import {
   INITIAL_ACOMPANHAMENTOS,
@@ -47,8 +47,8 @@ export const ModalOpcoesProduto: React.FC<PropriedadesModalOpcoesProduto> = ({
   // Estado dos acompanhamentos
   const [selectedComplements, setSelectedComplements] = useState<Complement[]>([]);
 
-  // Estado da cobertura (Seção 9: exatamente 1 cobertura)
-  const [selectedCobertura, setSelectedCobertura] = useState<string>('');
+  // Seleção múltipla por IDs únicos, independente dos acompanhamentos
+  const [selectedCoberturas, setSelectedCoberturas] = useState<string[]>([]);
 
   // Estado da quantidade
   const [quantity, setQuantity] = useState(1);
@@ -56,7 +56,7 @@ export const ModalOpcoesProduto: React.FC<PropriedadesModalOpcoesProduto> = ({
   const [validationError, setValidationError] = useState('');
 
   // Reinicia e inicializa o estado quando o produto muda
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (product) {
       const defaultS = isFixedPrice
         ? undefined
@@ -70,9 +70,15 @@ export const ModalOpcoesProduto: React.FC<PropriedadesModalOpcoesProduto> = ({
       setNotes('');
       setValidationError('');
 
-      setSelectedCobertura('');
+      setSelectedCoberturas(initializeCoberturas([], availableCoberturas, supportsCobertura));
     }
   }, [product, initialSize, isOpen]);
+
+  // Revalida quando as opções são carregadas/atualizadas, preservando a escolha válida.
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    setSelectedCoberturas(current => initializeCoberturas(current, availableCoberturas, supportsCobertura));
+  }, [isOpen, supportsCobertura, availableCoberturas]);
 
   if (!isOpen || !product) return null;
 
@@ -119,7 +125,9 @@ export const ModalOpcoesProduto: React.FC<PropriedadesModalOpcoesProduto> = ({
   const formatCurrency = (val: number) => `R$ ${val.toFixed(2).replace('.', ',')}`;
 
   const handleConfirmAdd = () => {
-    const error = validateOptionGroups(optionGroups);
+    const error = selectedCoberturas.some(id => !activeCoberturas.some(c => c.id === id))
+      ? 'Escolha coberturas disponíveis para continuar.'
+      : validateOptionGroups(optionGroups);
     if (error) {
       setValidationError(error);
       return;
@@ -136,7 +144,7 @@ export const ModalOpcoesProduto: React.FC<PropriedadesModalOpcoesProduto> = ({
       selectedSize: isFixedPrice ? undefined : selectedSize,
       tipo: product.tipo || undefined,
       selectedComplements,
-      cobertura: supportsCobertura ? selectedCobertura : undefined,
+      coberturas: supportsCobertura ? selectedCoberturas.map(id => activeCoberturas.find(c => c.id === id)!).map(({ id, name }) => ({ id, name })) : [],
       unitPrice,
       quantity,
       notes: notes.trim(),
@@ -149,10 +157,12 @@ export const ModalOpcoesProduto: React.FC<PropriedadesModalOpcoesProduto> = ({
   const activeComplements = availableAcompanhamentos.filter((c) => c.active !== false);
   const activeCoberturas = availableCoberturas.filter((c) => c.active !== false);
 
+  const selectedCoberturaCount = selectedCoberturas.length;
+
   const optionGroups = [
     ...(productSizes.length ? [{ name: 'Tamanho', count: productSizes.some(s => s.id === selectedSize?.id) ? 1 : 0, min: 1, max: 1 }] : []),
     ...(isAcai ? [{ name: 'Acompanhamentos', count: selectedComplements.filter(c => activeComplements.some(a => a.id === c.id)).length, min: maxComplementsAllowed, max: maxComplementsAllowed }] : []),
-    ...(supportsCobertura ? [{ name: 'Cobertura', count: activeCoberturas.some(c => c.name === selectedCobertura) ? 1 : 0, min: 1, max: 1 }] : []),
+    ...(supportsCobertura ? [{ name: 'Cobertura', count: selectedCoberturaCount, ...REGRAS_COBERTURA }] : []),
   ];
   const optionsError = validateOptionGroups(optionGroups);
 
@@ -342,22 +352,24 @@ export const ModalOpcoesProduto: React.FC<PropriedadesModalOpcoesProduto> = ({
                 </label>
                 {/* Regra: "Escolha 1 cobertura" */}
                 <span className="text-xs font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full">
-                  Escolha 1 cobertura
+                  {selectedCoberturaCount} de {REGRAS_COBERTURA.max} selecionados
                 </span>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {activeCoberturas.map((cob) => {
-                  const isSelected = selectedCobertura === cob.name;
+                  const isSelected = selectedCoberturas.includes(cob.id);
+                  const isDisabled = !isSelected && selectedCoberturas.length >= REGRAS_COBERTURA.max;
                   return (
                     <button
                       key={cob.id}
+                      disabled={isDisabled}
                       type="button"
                       onClick={() => {
-                        setSelectedCobertura(cob.name);
+                        setSelectedCoberturas(current => toggleGroupSelection(current, cob.id, REGRAS_COBERTURA));
                         setValidationError('');
                       }}
-                      className={`p-2.5 rounded-xl border text-left text-xs font-bold transition-all cursor-pointer flex items-center justify-between gap-1 ${
+                      className={`disabled:opacity-50 disabled:cursor-not-allowed p-2.5 rounded-xl border text-left text-xs font-bold transition-all cursor-pointer flex items-center justify-between gap-1 ${
                         isSelected
                           ? 'border-[#8ac627] bg-[#f7fee7] text-[#1e032b] ring-2 ring-[#8ac627]/40'
                           : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'

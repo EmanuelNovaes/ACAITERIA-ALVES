@@ -1,3 +1,4 @@
+import { getSelectedCoberturas } from '../utilitarios/Coberturas';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 import {
@@ -304,7 +305,7 @@ export const ProvedorCarrinho: React.FC<{ children: React.ReactNode }> = ({
       (item.tipo || '').trim().toLowerCase();
 
     const coberturaPart =
-      (item.cobertura || '').trim().toLowerCase();
+      JSON.stringify(getSelectedCoberturas(item).map(c => c.id || c.name.toLowerCase()).sort());
 
     const complementsPart =
       item.selectedComplements

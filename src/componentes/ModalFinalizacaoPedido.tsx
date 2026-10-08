@@ -4,7 +4,7 @@ import { usarCarrinho } from '../contexto/ContextoCarrinho';
 import { DeliveryType } from '../tipos/Cardapio';
 import { formatBrazilPhone, isValidBrazilPhone } from '../utilitarios/Telefone';
 import { recordCheckoutOrder } from '../servicos/ServicoPedidos';
-import { isStoreOpenAt } from '../utilitarios/HorarioLoja';
+import { isStoreOpenAt, ENFORCE_STORE_HOURS } from '../utilitarios/HorarioLoja';
 
 interface PropriedadesModalFinalizacaoPedido {
   isOpen: boolean;
@@ -56,7 +56,7 @@ export const ModalFinalizacaoPedido: React.FC<PropriedadesModalFinalizacaoPedido
   const handleSubmit = async () => {
     if (submitting.current) return;
     if (!items.length) { setError('Adicione itens ao pedido.'); return; }
-    if (!storeIsOpen || !isStoreOpenAt()) { onClosedOrderAttempt?.(); return; }
+    if (ENFORCE_STORE_HOURS && (!storeIsOpen || !isStoreOpenAt())) { onClosedOrderAttempt?.(); return; }
     if (!name.trim()) {
       setError('Informe seu nome.');
       return;

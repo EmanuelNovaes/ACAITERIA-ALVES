@@ -1,3 +1,4 @@
+import { getSelectedCoberturas } from '../utilitarios/Coberturas';
 import { supabase, isSupabaseConfigured } from './supabase';
 import { CartItem, CustomerOrderInfo } from '../tipos/Cardapio';
 import { normalizePhone } from '../utilitarios/Telefone';
@@ -20,8 +21,8 @@ export async function recordCheckoutOrder(info: CustomerOrderInfo, items: CartIt
       bairro: info.neighborhood, ponto_referencia: info.referencePoint, forma_pagamento: info.paymentMethod, observacoes: info.notes },
     p_itens: items.map(item => ({ produto_id: item.productId, produto_nome: item.productName, categoria_nome: item.categoryName,
       quantidade: item.quantity, preco_unitario: item.unitPrice, subtotal: item.totalPrice, tamanho: item.selectedSize ?? null,
-      complementos: item.selectedComplements ?? [], cobertura: item.cobertura ?? '', observacoes: item.notes ?? '',
-      detalhes: { tipo: item.tipo ?? null, is_combo: item.isCombo ?? false, combo_categoria: item.comboCategoryName ?? null, unidades: item.units ?? null } }))
+      complementos: item.selectedComplements ?? [], cobertura: getSelectedCoberturas(item).map(c => c.name).join(', '), observacoes: item.notes ?? '',
+      detalhes: { coberturas: getSelectedCoberturas(item), tipo: item.tipo ?? null, is_combo: item.isCombo ?? false, combo_categoria: item.comboCategoryName ?? null, unidades: item.units ?? null } }))
   });
   if (error) throw error;
   if (typeof data !== 'string' || !data) throw new Error('Registro do pedido não confirmado');

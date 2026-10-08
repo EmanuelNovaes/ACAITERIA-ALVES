@@ -83,6 +83,7 @@ export interface CartItem {
   tipo?: string;
   selectedComplements: Complement[];
   cobertura?: string;
+  coberturas?: Array<{ id: string; name: string }>;
   unitPrice: number;
   quantity: number;
   totalPrice: number;

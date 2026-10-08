@@ -1,0 +1,22 @@
+import { readFileSync } from 'node:fs';
+import { stripTypeScriptTypes } from 'node:module';
+import assert from 'node:assert/strict';
+const load = async path => import('data:text/javascript;base64,' + Buffer.from(stripTypeScriptTypes(readFileSync(path, 'utf8'))).toString('base64'));
+const { initializeCoberturas: init, toggleGroupSelection: toggle, REGRAS_COBERTURA: rules, validateOptionGroups: validate } = await load('src/utilitarios/ValidacaoOpcoes.ts');
+const { getSelectedCoberturas: get } = await load('src/utilitarios/Coberturas.ts');
+const { isStoreOpenAt, ENFORCE_STORE_HOURS } = await load('src/utilitarios/HorarioLoja.ts');
+const options = [{ id: 'inactive', name: 'Inativa', active: false }, ...['a','b','c','d'].map(id => ({ id, name: id.toUpperCase() }))];
+let count = 0;
+function test(name, fn) { fn(); count++; console.log('PASS ' + name); }
+let state;
+test('Inicializa primeira ativa / contador 1 de 3', () => { state = init([], options, true); assert.deepEqual(state, ['a']); assert.equal(rules.max, 3); });
+test('Segunda e terceira / contadores reais', () => { state = toggle(state, 'b', rules); assert.equal(state.length, 2); state = toggle(state, 'c', rules); assert.equal(state.length, 3); });
+test('Quarta e cliques rápidos bloqueados no estado', () => { for (let i=0;i<20;i++) state = toggle(state, 'd', rules); assert.deepEqual(state, ['a','b','c']); });
+test('Remoção e mínimo obrigatório', () => { state = toggle(state, 'b', rules); assert.equal(state.length, 2); state = toggle(state, 'c', rules); state = toggle(state, 'a', rules); assert.deepEqual(state, ['a']); });
+test('Atualização, tamanho e reabertura idempotentes', () => { state = init(['a','b'], options, true); assert.deepEqual(init(state, options, true), state); assert.deepEqual(init([], options, true), ['a']); assert.deepEqual(init(['a','a','b','c','d'], options, true), ['a','b','c']); });
+test('Disponibilidade alterada e produto sem cobertura', () => { assert.deepEqual(init(['inactive'], options, true), ['a']); assert.deepEqual(init(['a'], options, false), []); assert.deepEqual(init([], [], true), []); });
+test('Cada grupo validado independentemente', () => { for (const n of [1,2,3]) assert.equal(validate([{ name:'Cobertura',count:n,...rules }]), undefined); for (const n of [0,4]) assert.ok(validate([{ name:'Cobertura',count:n,...rules }])); assert.ok(validate([{ name:'Acompanhamentos',count:2,min:3,max:3 }, { name:'Cobertura',count:3,...rules }])); });
+test('Carrinho e JSONB preservam IDs e nomes / legado', () => { const selected = options.slice(1,4).map(({id,name})=>({id,name})); const item = JSON.parse(JSON.stringify({ coberturas:selected })); assert.deepEqual(get(item), selected); assert.deepEqual(get({ detalhes:{ coberturas:selected }, cobertura:'A, B, C' }), selected); assert.deepEqual(get({ cobertura:'Morango' }), [{id:'',name:'Morango'}]); });
+test('Persistência usa JSONB existente e resumo legível', () => { const source = readFileSync('src/servicos/ServicoPedidos.ts','utf8'); assert.ok(source.includes('detalhes: { coberturas: getSelectedCoberturas(item)')); assert.ok(source.includes("cobertura: getSelectedCoberturas(item).map(c => c.name).join(', ')")); });
+test('Horário temporariamente liberado, cálculo original preservado', () => { assert.equal(ENFORCE_STORE_HOURS, false); assert.equal(isStoreOpenAt(new Date(2026,9,8,2,0)), false); assert.equal(isStoreOpenAt(new Date(2026,9,8,16,0)), true); for (const path of ['src/componentes/CarrinhoLateral.tsx','src/componentes/ModalFinalizacaoPedido.tsx']) assert.match(readFileSync(path,'utf8'), /if \(ENFORCE_STORE_HOURS &&/); });
+console.log(`${count} testes de cobertura passaram.`);

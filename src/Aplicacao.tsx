@@ -25,7 +25,7 @@ import { AcessoAdministrador } from './paginas/AcessoAdministrador';
 import PainelAdministrador from './paginas/PainelAdministrador';
 const PainelVendas = React.lazy(() => import('./paginas/PainelVendas'));
 import { getCategoryFlags, getProductTypes, isComboCategory, sortProductsForMenu } from './utilitarios/RegrasCategorias';
-import { isStoreOpenAt } from './utilitarios/HorarioLoja';
+import { isStoreOpenAt, ENFORCE_STORE_HOURS } from './utilitarios/HorarioLoja';
 
 function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
   const [storeIsOpen, setStoreIsOpen] = useState(() => isStoreOpenAt());
@@ -388,7 +388,7 @@ function MenuContent({ onNavigateToAdmin }: { onNavigateToAdmin: () => void }) {
       {/* Carrinho lateral deslizante para celular */}
       <CarrinhoLateral isEmbeddedDesktop={false} storeIsOpen={storeIsOpen} onClosedOrderAttempt={() => setShowClosedNotice(true)} />
 
-      {showClosedNotice && !storeIsOpen && (
+      {ENFORCE_STORE_HOURS && showClosedNotice && !storeIsOpen && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4">
           <section role="dialog" aria-modal="true" aria-labelledby="store-closed-title" className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
             <h2 id="store-closed-title" className="text-xl font-black text-[#35074a]">A Açaiteria Alves está fechada no momento 💜</h2>
