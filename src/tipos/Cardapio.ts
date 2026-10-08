@@ -83,6 +83,7 @@ export interface CartItem {
   tipo?: string;
   selectedComplements: Complement[];
   cobertura?: string;
+  /** Compatibilidade com itens salvos durante a seleção múltipla; novos itens usam cobertura. */
   coberturas?: Array<{ id: string; name: string }>;
   unitPrice: number;
   quantity: number;

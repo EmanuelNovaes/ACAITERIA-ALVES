@@ -10,7 +10,7 @@ const currency = (value: number) => `R$ ${value.toFixed(2).replace('.', ',')}`;
 export function buildWhatsAppOrderMessage(
   items: CartItem[], info: CustomerOrderInfo, subtotal: number, deliveryFee: number, orderId?: string,
 ): string {
-  const lines = [`*NOVO PEDIDO${clean(orderId) ? ` #${clean(orderId)}` : ''}*`, ''];
+  const lines = ['*NOVO PEDIDO*', ''];
   const field = (label: string, value?: string) => {
     if (clean(value)) lines.push(`*${label}:* ${clean(value)}`);
   };

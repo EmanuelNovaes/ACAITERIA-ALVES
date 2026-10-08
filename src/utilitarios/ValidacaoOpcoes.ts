@@ -15,16 +15,21 @@ export function validateOptionGroups(groups: OptionGroup[]): string | undefined 
   return undefined;
 }
 
-export const REGRAS_COBERTURA = Object.freeze({ min: 1, max: 3 });
-
-export function initializeCoberturas(current: string[], available: Cobertura[], hasGroup: boolean): string[] {
-  if (!hasGroup) return [];
+export function initializeCobertura(current: string, available: Cobertura[], hasGroup: boolean): string {
+  if (!hasGroup) return '';
   const active = available.filter(option => option.active !== false && option.id && option.name.trim());
-  const valid = [...new Set(current)].filter(id => active.some(option => option.id === id)).slice(0, REGRAS_COBERTURA.max);
-  return valid.length ? valid : active.slice(0, REGRAS_COBERTURA.min).map(option => option.id);
+  return active.some(option => option.id === current) ? current : active[0]?.id || '';
 }
 
-export function toggleGroupSelection(current: string[], id: string, rules: { min: number; max: number }): string[] {
-  if (current.includes(id)) return current.length > rules.min ? current.filter(value => value !== id) : current;
-  return current.length < rules.max ? [...current, id] : current;
+export function countSelectedOptions(complements: readonly unknown[], cobertura: string): number {
+  return complements.length + (cobertura ? 1 : 0);
+}
+
+export function remainingComplementSlots(limit: number, cobertura: string): number {
+  return Math.max(0, limit - countSelectedOptions([], cobertura));
+}
+
+export function toggleComplementSelection<T extends { id: string }>(current: T[], option: T, limit: number, cobertura: string): T[] {
+  if (current.some(item => item.id === option.id)) return current.filter(item => item.id !== option.id);
+  return countSelectedOptions(current, cobertura) < limit ? [...current, option] : current;
 }

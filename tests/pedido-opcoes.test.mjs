@@ -23,13 +23,13 @@ test('D observação de produto', () => { const m = message([acai], info, 22, 0)
 test('E ambas observações', () => { const m = message([acai], { ...info, notes: 'Colocar colher' }, 22, 0); assert.equal(m.split('Sem granola').length, 2); assert.equal(m.split('Colocar colher').length, 2); });
 test('F produto simples compacto e quantidade real', () => { const m = message([{ ...simple, quantity: 2, totalPrice: 12 }], info, 12, 0); assert.match(m, /2x \*COCA-COLA LATA\*\n   R\$ 12,00/); assert.doesNotMatch(m, /•/); });
 test('G tipo, tamanho, cobertura e complementos', () => { const m = message([acai], info, 22, 0); for (const value of ['AÇAÍ NA MARMITA', '500 ML', 'Abacaxi', 'Granola, Leite condensado']) assert.ok(m.includes(value)); assert.doesNotMatch(m, /acai_marmita|undefined|null/); });
-const groups = (a, c, limit = 3) => [{ name: 'Acompanhamentos', count: a, min: limit, max: limit }, { name: 'Cobertura', count: c, min: 1, max: 1 }];
-test('H grupos independentes', () => assert.ok(validate(groups(2, 1))));
-test('I três de quatro bloqueados', () => assert.ok(validate(groups(3, 0))));
-test('J três acompanhamentos e uma cobertura permitidos', () => assert.equal(validate(groups(3, 1)), undefined));
-test('K configurações diferentes e máximo', () => { assert.equal(validate(groups(6, 1, 6)), undefined); assert.ok(validate(groups(5, 1, 6))); assert.ok(validate(groups(4, 1))); assert.ok(validate(groups(3, 2))); assert.equal(validate([]), undefined); });
+const groups = (a, c, limit = 3) => [{ name: 'Acompanhamentos e cobertura', count: a + c, min: 0, max: limit }, { name: 'Cobertura', count: c, min: 1, max: 1 }];
+test('H cobertura obrigatória e limite compartilhado', () => assert.ok(validate(groups(2, 0))));
+test('I excesso total bloqueado', () => assert.ok(validate(groups(3, 1))));
+test('J dois acompanhamentos e uma cobertura permitidos', () => assert.equal(validate(groups(2, 1)), undefined));
+test('K configurações diferentes e máximo', () => { assert.equal(validate(groups(5, 1, 6)), undefined); assert.equal(validate(groups(0, 1, 6)), undefined); assert.ok(validate(groups(6, 1, 6))); assert.ok(validate(groups(2, 2))); assert.equal(validate([]), undefined); });
 test('Campos vazios e emojis omitidos', () => { const m = message([{ ...simple, notes: '  🛵 ', cobertura: ' ' }], { ...info, notes: '  🛍️ ' }, 6, 0); assert.doesNotMatch(m, /Observa|Cobertura|\p{Extended_Pictographic}/u); });
-test('Múltiplas coberturas preservadas no WhatsApp sem IDs', () => {
+test('Compatibilidade com itens antigos de múltiplas coberturas no WhatsApp', () => {
   const m = message([{ ...acai, coberturas: [{id:'interno-a',name:'Morango'}, {id:'interno-b',name:'Chocolate'}, {id:'interno-c',name:'Caramelo'}] }], info, 22, 0);
   assert.match(m, /• Coberturas: Morango, Chocolate, Caramelo/);
   assert.doesNotMatch(m, /interno-|Abacaxi|\p{Extended_Pictographic}/u);
