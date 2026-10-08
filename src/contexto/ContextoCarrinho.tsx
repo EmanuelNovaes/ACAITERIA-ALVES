@@ -11,7 +11,7 @@ import {
   INITIAL_STORE_CONFIG,
 } from '../dados/ConfiguracaoCardapio';
 
-import { getAcaiTypeMessageLabel } from '../utilitarios/RegrasCategorias';
+import { buildWhatsAppOrderMessage } from '../utilitarios/MensagemPedido';
 
 interface TipoContextoCarrinho {
   items: CartItem[];
@@ -50,7 +50,7 @@ interface TipoContextoCarrinho {
 
   resetStoreConfig: () => void;
 
-  sendOrderViaWhatsApp: (overrideInfo?: Partial<CustomerOrderInfo>, popupWindow?: Window | null) => boolean;
+  sendOrderViaWhatsApp: (overrideInfo?: Partial<CustomerOrderInfo>, popupWindow?: Window | null, orderId?: string) => boolean;
 
   lastOrderSent: boolean;
 
@@ -446,15 +446,6 @@ export const ProvedorCarrinho: React.FC<{ children: React.ReactNode }> = ({
   // FORMATAÇÃO DE VALORES
   // =========================================================
 
-  const formatCurrency = (value: number) => {
-    return `R$ ${value
-      .toFixed(2)
-      .replace('.', ',')}`;
-  };
-
-  const removeUnsafeEmoji = (value: string) =>
-    value.replace(/[\p{Extended_Pictographic}\p{Regional_Indicator}\uFE0F\u200D\u20E3\uFFFD]/gu, '');
-
   // =========================================================
   // ENVIO DO PEDIDO PARA O WHATSAPP
   // =========================================================
@@ -462,6 +453,7 @@ export const ProvedorCarrinho: React.FC<{ children: React.ReactNode }> = ({
   const sendOrderViaWhatsApp = (
     overrideInfo?: Partial<CustomerOrderInfo>,
     popupWindow?: Window | null,
+    orderId?: string,
   ): boolean => {
     if (items.length === 0) {
       return false;
@@ -476,206 +468,8 @@ export const ProvedorCarrinho: React.FC<{ children: React.ReactNode }> = ({
       ...overrideInfo,
     };
 
-    const lines: string[] = [];
-
-    // -------------------------------------------------------
-    // CABEÇALHO
-    // -------------------------------------------------------
-
-    lines.push(
-      `Olá! Gostaria de fazer um pedido:\n`
-    );
-
-    // -------------------------------------------------------
-    // PRODUTOS
-    // -------------------------------------------------------
-
-    items.forEach((item) => {
-      if (item.isCombo) {
-        lines.push(`*${item.comboCategoryName || 'Outros Combos'}*`);
-      }
-
-      // Tipo do açaí (copo ou marmita) de acordo com o produto escolhido
-      const acaiTypeLabel = getAcaiTypeMessageLabel(item.tipo);
-      if (acaiTypeLabel) {
-        lines.push(`*${acaiTypeLabel.toLocaleUpperCase('pt-BR')}*`);
-      }
-      lines.push(`*${item.productName}*`);
-
-      if (item.isCombo) {
-        if (item.units != null) lines.push(`Unidades no combo: ${item.units}`);
-      }
-
-      if (item.selectedSize) {
-        lines.push(
-          `Tamanho: ${item.selectedSize.label}`
-        );
-      }
-
-      if (item.tipo && !acaiTypeLabel && !item.isCombo) {
-        lines.push(`Opção: ${item.tipo}`);
-      }
-
-      if (
-        item.selectedComplements &&
-        item.selectedComplements.length > 0
-      ) {
-        lines.push(`\nAcompanhamentos:`);
-
-        item.selectedComplements.forEach(
-          (comp) => {
-            lines.push(`- ${comp.name}`);
-          }
-        );
-      }
-
-      if (item.cobertura) {
-        lines.push(
-          `\nCobertura: ${item.cobertura}`
-        );
-      }
-
-      if (item.notes && item.notes.trim()) {
-        lines.push(
-          `Observação: ${item.notes.trim()}`
-        );
-      }
-
-      lines.push(
-        `\nQuantidade: ${item.quantity}`
-      );
-
-      lines.push(
-        `Valor: ${formatCurrency(
-          item.totalPrice
-        )}\n`
-      );
-      lines.push(`--------------------------------`);
-    });
-
-    // -------------------------------------------------------
-    // VALORES
-    // -------------------------------------------------------
-
-    lines.push(
-      `Subtotal: ${formatCurrency(subtotal)}`
-    );
-
-    // Recalcula a taxa de entrega e o total com base no orderInfo
-    // (dados recebidos agora), e não no estado antigo do contexto.
-    const orderDeliveryFee =
-      items.length > 0 && orderInfo.deliveryType === 'entrega'
-        ? storeConfig.deliveryFee
-        : 0;
-
-    const orderTotal = subtotal + orderDeliveryFee;
-
-    if (
-      orderInfo.deliveryType === 'entrega'
-    ) {
-      lines.push(
-        `Taxa de entrega: ${formatCurrency(
-          orderDeliveryFee
-        )}`
-      );
-    }
-
-    lines.push(
-      `*Total: ${formatCurrency(orderTotal)}*`
-    );
-
-    // -------------------------------------------------------
-    // DADOS DO CLIENTE
-    // -------------------------------------------------------
-
-    lines.push(`\n*Dados do Pedido:*`);
-
-    if (orderInfo.name.trim()) {
-      lines.push(
-        `Nome: ${orderInfo.name.trim()}`
-      );
-    }
-
-    if (orderInfo.phone.trim()) {
-      lines.push(
-        `Telefone: ${orderInfo.phone.trim()}`
-      );
-    }
-
-    // -------------------------------------------------------
-    // ENTREGA
-    // -------------------------------------------------------
-
-    if (
-      orderInfo.deliveryType === 'entrega'
-    ) {
-      lines.push(`Tipo: Entrega`);
-
-      if (orderInfo.address.trim()) {
-        lines.push(
-          `Endereço: ${orderInfo.address.trim()}`
-        );
-      }
-
-      if (orderInfo.neighborhood.trim()) {
-        lines.push(
-          `Bairro: ${orderInfo.neighborhood.trim()}`
-        );
-      }
-
-      if (
-        orderInfo.referencePoint.trim()
-      ) {
-        lines.push(
-          `Ponto de referência: ${orderInfo.referencePoint.trim()}`
-        );
-      }
-    } else {
-      // -----------------------------------------------------
-      // RETIRADA
-      // -----------------------------------------------------
-
-      lines.push(
-        `Tipo: Retirada no local`
-      );
-    }
-
-    // -------------------------------------------------------
-    // PAGAMENTO
-    // -------------------------------------------------------
-
-    if (orderInfo.paymentMethod) {
-      lines.push(
-        `Forma de pagamento: ${orderInfo.paymentMethod}`
-      );
-    }
-
-    // -------------------------------------------------------
-    // OBSERVAÇÕES
-    // -------------------------------------------------------
-
-    if (
-      orderInfo.notes &&
-      orderInfo.notes.trim()
-    ) {
-      lines.push(
-        `Observações: ${orderInfo.notes.trim()}`
-      );
-    }
-
-    // -------------------------------------------------------
-    // RODAPÉ
-    // -------------------------------------------------------
-
-    lines.push(
-      `\n_Pedido gerado pelo Cardápio Digital Açaiteria Alves_`
-    );
-
-    // -------------------------------------------------------
-    // MENSAGEM FINAL
-    // -------------------------------------------------------
-
-    const fullMessage = removeUnsafeEmoji(lines.join('\n'));
+    const orderDeliveryFee = orderInfo.deliveryType === 'entrega' ? storeConfig.deliveryFee : 0;
+    const fullMessage = buildWhatsAppOrderMessage(items, orderInfo, subtotal, orderDeliveryFee, orderId);
 
     setLastSentMessage(fullMessage);
 

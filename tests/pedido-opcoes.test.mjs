@@ -1,0 +1,31 @@
+import { readFileSync } from 'node:fs';
+import { stripTypeScriptTypes } from 'node:module';
+import assert from 'node:assert/strict';
+const load = async (path, replacements = []) => {
+  let source = readFileSync(path, 'utf8');
+  for (const [from, to] of replacements) source = source.replace(from, to);
+  return import('data:text/javascript;base64,' + Buffer.from(stripTypeScriptTypes(source)).toString('base64'));
+};
+const rulesSource = stripTypeScriptTypes(readFileSync('src/utilitarios/RegrasCategorias.ts', 'utf8').replace(/import .* from .*;\r?\n/, ''));
+const rulesUrl = 'data:text/javascript;base64,' + Buffer.from(rulesSource).toString('base64');
+const { buildWhatsAppOrderMessage: message } = await load('src/utilitarios/MensagemPedido.ts', [["'./RegrasCategorias'", JSON.stringify(rulesUrl)]]);
+const { validateOptionGroups: validate } = await load('src/utilitarios/ValidacaoOpcoes.ts');
+const info = { name: 'Emanuel', phone: '87988435251', deliveryType: 'retirada', address: 'Rua X, 100', neighborhood: 'Centro', referencePoint: '', paymentMethod: 'Pix', notes: '' };
+const simple = { productName: 'Coca-Cola Lata', quantity: 1, totalPrice: 6, selectedComplements: [] };
+const acai = { productName: 'Açaí + Banana', quantity: 1, totalPrice: 22, tipo: 'acai_marmita', selectedSize: { label: '500 ML' }, cobertura: 'Abacaxi', selectedComplements: [{ name: 'Granola' }, { name: 'Leite condensado' }], notes: 'Sem granola' };
+let passed = 0;
+function test(name, fn) { fn(); passed++; console.log('PASS ' + name); }
+test('A retirada sem observações', () => { const m = message([simple], info, 6, 2, 'chave-real'); assert.match(m, /NOVO PEDIDO #chave-real/); assert.match(m, /RETIRADA NO LOCAL/); assert.match(m, /\*Entrega:\* R\$ 0,00/); assert.doesNotMatch(m, /Endereço|Observa/); });
+test('B retirada com observação geral', () => { const m = message([simple], { ...info, notes: 'Entregar na portaria' }, 6, 2); assert.match(m, /RETIRADA NO LOCAL/); assert.match(m, /\*Observações do pedido:\*\nEntregar na portaria/); assert.doesNotMatch(m, /Endereço/); });
+test('C entrega com endereço', () => { const m = message([simple], { ...info, deliveryType: 'entrega' }, 6, 2); assert.match(m, /Rua X, 100/); assert.match(m, /Centro/); assert.match(m, /TOTAL: R\$ 8,00/); assert.doesNotMatch(m, /Ponto de referência/); });
+test('D observação de produto', () => { const m = message([acai], info, 22, 0); assert.match(m, /• Observação: Sem granola/); assert.doesNotMatch(m, /Observações do pedido/); });
+test('E ambas observações', () => { const m = message([acai], { ...info, notes: 'Colocar colher' }, 22, 0); assert.equal(m.split('Sem granola').length, 2); assert.equal(m.split('Colocar colher').length, 2); });
+test('F produto simples compacto e quantidade real', () => { const m = message([{ ...simple, quantity: 2, totalPrice: 12 }], info, 12, 0); assert.match(m, /2x \*COCA-COLA LATA\*\n   R\$ 12,00/); assert.doesNotMatch(m, /•/); });
+test('G tipo, tamanho, cobertura e complementos', () => { const m = message([acai], info, 22, 0); for (const value of ['AÇAÍ NA MARMITA', '500 ML', 'Abacaxi', 'Granola, Leite condensado']) assert.ok(m.includes(value)); assert.doesNotMatch(m, /acai_marmita|undefined|null/); });
+const groups = (a, c, limit = 3) => [{ name: 'Acompanhamentos', count: a, min: limit, max: limit }, { name: 'Cobertura', count: c, min: 1, max: 1 }];
+test('H grupos independentes', () => assert.ok(validate(groups(2, 1))));
+test('I três de quatro bloqueados', () => assert.ok(validate(groups(3, 0))));
+test('J três acompanhamentos e uma cobertura permitidos', () => assert.equal(validate(groups(3, 1)), undefined));
+test('K configurações diferentes e máximo', () => { assert.equal(validate(groups(6, 1, 6)), undefined); assert.ok(validate(groups(5, 1, 6))); assert.ok(validate(groups(4, 1))); assert.ok(validate(groups(3, 2))); assert.equal(validate([]), undefined); });
+test('Campos vazios e emojis omitidos', () => { const m = message([{ ...simple, notes: '  🛵 ', cobertura: ' ' }], { ...info, notes: '  🛍️ ' }, 6, 0); assert.doesNotMatch(m, /Observa|Cobertura|\p{Extended_Pictographic}/u); });
+console.log(`${passed} testes passaram.`);

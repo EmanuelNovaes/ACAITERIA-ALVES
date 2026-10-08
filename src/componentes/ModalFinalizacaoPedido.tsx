@@ -95,17 +95,17 @@ export const ModalFinalizacaoPedido: React.FC<PropriedadesModalFinalizacaoPedido
     // estado do React.
     submitting.current = true;
     setSaving(true);
-    sendOrderViaWhatsApp(finalInfo);
+    const orderSubtotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
+    const deliveryFee = deliveryType === 'entrega' ? storeConfig.deliveryFee : 0;
+    const signature = JSON.stringify([finalInfo, items, orderSubtotal, deliveryFee]);
+    if (checkoutAttempt.current?.signature !== signature) {
+      checkoutAttempt.current = { signature, key: crypto.randomUUID() };
+    }
+    sendOrderViaWhatsApp(finalInfo, undefined, checkoutAttempt.current.key);
     setDeliveryType(deliveryType);
     updateCustomerInfo(finalInfo);
     onConfirmed();
     try {
-      const orderSubtotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
-      const deliveryFee = deliveryType === 'entrega' ? storeConfig.deliveryFee : 0;
-      const signature = JSON.stringify([finalInfo, items, orderSubtotal, deliveryFee]);
-      if (checkoutAttempt.current?.signature !== signature) {
-        checkoutAttempt.current = { signature, key: crypto.randomUUID() };
-      }
       await recordCheckoutOrder(finalInfo, items, orderSubtotal, deliveryFee, orderSubtotal + deliveryFee, checkoutAttempt.current.key);
     } catch (e) {
       console.error('Não foi possível salvar o pedido no Supabase.', e);

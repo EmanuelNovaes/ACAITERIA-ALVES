@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Check, Plus, Minus, AlertCircle } from 'lucide-react';
 import { Category, Product, ProductSize, Complement, Cobertura } from '../tipos/Cardapio';
 import { getCategoryFlags, getProductTypeLabel } from '../utilitarios/RegrasCategorias';
+import { validateOptionGroups } from '../utilitarios/ValidacaoOpcoes';
 import { usarCarrinho } from '../contexto/ContextoCarrinho';
 import {
   INITIAL_ACOMPANHAMENTOS,
@@ -69,12 +70,7 @@ export const ModalOpcoesProduto: React.FC<PropriedadesModalOpcoesProduto> = ({
       setNotes('');
       setValidationError('');
 
-      // Seleciona a primeira cobertura por padrão ou deixa vazio
-      if (supportsCobertura && availableCoberturas.length > 0) {
-        setSelectedCobertura(availableCoberturas[0].name);
-      } else {
-        setSelectedCobertura('');
-      }
+      setSelectedCobertura('');
     }
   }, [product, initialSize, isOpen]);
 
@@ -82,14 +78,14 @@ export const ModalOpcoesProduto: React.FC<PropriedadesModalOpcoesProduto> = ({
 
   // Máximo de acompanhamentos permitidos para o tamanho selecionado
   const maxComplementsAllowed = selectedSize?.maxComplements ?? product.maxFreeComplements ?? 4;
-  const selectedCount = selectedComplements.length + (selectedCobertura ? 1 : 0);
+  const selectedCount = selectedComplements.length;
 
   // Trata a mudança de tamanho e reduz os acompanhamentos se o novo limite for menor
   const handleSizeChange = (newSize: ProductSize) => {
     setSelectedSize(newSize);
-    const newLimit = newSize.maxComplements ?? 4;
-    if (selectedComplements.length + (selectedCobertura ? 1 : 0) > newLimit) {
-      setSelectedComplements((prev) => prev.slice(0, Math.max(0, newLimit - (selectedCobertura ? 1 : 0))));
+    const newLimit = newSize.maxComplements ?? product.maxFreeComplements ?? 4;
+    if (selectedComplements.length > newLimit) {
+      setSelectedComplements((prev) => prev.slice(0, newLimit));
       setValidationError(
         `Limite ajustado para ${newLimit} acompanhamentos devido ao tamanho ${newSize.label}.`
       );
@@ -123,9 +119,9 @@ export const ModalOpcoesProduto: React.FC<PropriedadesModalOpcoesProduto> = ({
   const formatCurrency = (val: number) => `R$ ${val.toFixed(2).replace('.', ',')}`;
 
   const handleConfirmAdd = () => {
-    // Validação: 1 cobertura é obrigatória para açaí (Seção 9)
-    if (supportsCobertura && !selectedCobertura) {
-      setValidationError('Por favor, escolha 1 cobertura para continuar.');
+    const error = validateOptionGroups(optionGroups);
+    if (error) {
+      setValidationError(error);
       return;
     }
 
@@ -152,6 +148,13 @@ export const ModalOpcoesProduto: React.FC<PropriedadesModalOpcoesProduto> = ({
   // Filtra apenas acompanhamentos e coberturas ativos
   const activeComplements = availableAcompanhamentos.filter((c) => c.active !== false);
   const activeCoberturas = availableCoberturas.filter((c) => c.active !== false);
+
+  const optionGroups = [
+    ...(productSizes.length ? [{ name: 'Tamanho', count: productSizes.some(s => s.id === selectedSize?.id) ? 1 : 0, min: 1, max: 1 }] : []),
+    ...(isAcai ? [{ name: 'Acompanhamentos', count: selectedComplements.filter(c => activeComplements.some(a => a.id === c.id)).length, min: maxComplementsAllowed, max: maxComplementsAllowed }] : []),
+    ...(supportsCobertura ? [{ name: 'Cobertura', count: activeCoberturas.some(c => c.name === selectedCobertura) ? 1 : 0, min: 1, max: 1 }] : []),
+  ];
+  const optionsError = validateOptionGroups(optionGroups);
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/65 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
@@ -253,7 +256,7 @@ export const ModalOpcoesProduto: React.FC<PropriedadesModalOpcoesProduto> = ({
                       </span>
                       {!isMilkShake && size.maxComplements && (
                         <span className="text-[10px] font-semibold text-emerald-700 mt-1">
-                          Até {size.maxComplements} acomp.
+                          {size.maxComplements} acomp. obrigatórios
                         </span>
                       )}
                     </button>
@@ -285,7 +288,7 @@ export const ModalOpcoesProduto: React.FC<PropriedadesModalOpcoesProduto> = ({
                 </span>
               </div>
               <p className="text-[11px] text-slate-500">
-                Selecione até {maxComplementsAllowed} opções incluídas no tamanho{' '}
+                Selecione {maxComplementsAllowed} opções incluídas no tamanho{' '}
                 {selectedSize?.label || ''}.
               </p>
 
@@ -324,12 +327,6 @@ export const ModalOpcoesProduto: React.FC<PropriedadesModalOpcoesProduto> = ({
                 })}
               </div>
             </div>
-          )}
-
-          {isAcai && activeComplements.length > 0 && (
-            <p className="-mt-4 text-[11px] font-medium text-emerald-700">
-              Atenção: a cobertura também conta como acompanhamento.
-            </p>
           )}
 
           {/* Cobertura */}
@@ -428,7 +425,9 @@ export const ModalOpcoesProduto: React.FC<PropriedadesModalOpcoesProduto> = ({
           <button
             type="button"
             onClick={handleConfirmAdd}
-            className="flex-1 py-3 px-4 rounded-xl bg-[#b6f625] hover:bg-[#a6e61a] active:scale-98 text-[#1e032b] font-black text-xs sm:text-sm flex items-center justify-between shadow-sm transition-all cursor-pointer"
+            disabled={Boolean(optionsError)}
+            title={optionsError || undefined}
+            className="disabled:opacity-50 disabled:cursor-not-allowed flex-1 py-3 px-4 rounded-xl bg-[#b6f625] hover:bg-[#a6e61a] active:scale-98 text-[#1e032b] font-black text-xs sm:text-sm flex items-center justify-between shadow-sm transition-all cursor-pointer"
           >
             <span>Adicionar ao pedido</span>
             <span>{formatCurrency(totalPrice)}</span>
